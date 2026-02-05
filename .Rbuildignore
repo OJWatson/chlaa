@@ -1,5 +1,11 @@
-^SCHEMA\.md$
+^_pkgdown\.yml$
+^index\.md$
+^README\.md$
+^NEWS\.md$
+^LICENSE\.md$
 ^\.github$
-^tools$
-^.*\.Rproj$
+^docs$
 ^\.Rproj\.user$
+^.*\.Rproj$
+^PROJECT_OVERVIEW\.md$
+^inst/stan/vr_reporting_model\.rds$
