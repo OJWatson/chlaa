@@ -1,0 +1,5 @@
+^SCHEMA\.md$
+^\.github$
+^tools$
+^.*\.Rproj$
+^\.Rproj\.user$
