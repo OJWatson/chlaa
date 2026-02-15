@@ -46,3 +46,6 @@ Thumbs.db
 # Track docs/packaging.md (developer docs), while still ignoring pkgdown output
 !/docs/
 !/docs/packaging.md
+
+# local rich runtime (ignored)
+/rich
