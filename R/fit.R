@@ -37,7 +37,9 @@ cholera_fit_pmcmc <- function(data,
   }
 
   gen <- cholera_generator(which = "fit")
-  time_start <- min(data$time)
+  # dust2 expects the filter start time to be strictly earlier than the first
+  # observation time.
+  time_start <- min(data$time) - 1
 
   filter <- dust2::dust_filter_create(gen, time_start = time_start, data = data, n_particles = n_particles)
 
@@ -51,10 +53,11 @@ cholera_fit_pmcmc <- function(data,
   likelihood <- dust2::dust_likelihood_monty(filter, packer)
   posterior <- prior + likelihood
 
-  sampler <- monty::monty_sampler_random_walk(diag(length(packer$names)) * proposal_var)
+  packer_names <- packer[["names"]]()
+  sampler <- monty::monty_sampler_random_walk(diag(length(packer_names)) * proposal_var)
 
   set.seed(seed)
-  initial_vec <- packer$pack(pars)
+  initial_vec <- packer[["pack"]](pars)
 
   res <- monty::monty_sample(posterior, sampler, n_steps, initial = initial_vec)
 
@@ -86,12 +89,14 @@ cholera_default_packer <- function(pars) {
   if (!requireNamespace("monty", quietly = TRUE)) stop("monty is required for fitting", call. = FALSE)
   .check_named_list(pars, "pars")
 
+  # Keep this order consistent with `cholera_default_prior()` (monty uses
+  # positional parameter matching).
   names_fit <- c(
-    "trans_prob","contact_rate",
-    "incubation_time","duration_sym",
+    "trans_prob", "contact_rate",
+    "incubation_time", "duration_sym",
+    "reporting_rate", "obs_size",
     "seek_severe",
-    "fatality_untreated","fatality_treated",
-    "reporting_rate","obs_size"
+    "fatality_untreated", "fatality_treated"
   )
 
   fixed <- pars[setdiff(names(pars), names_fit)]

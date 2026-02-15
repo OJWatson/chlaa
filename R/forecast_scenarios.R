@@ -68,7 +68,7 @@
       p[common] <- as.list(as.numeric(theta[common]))
     }
     if (!is.null(modify)) {
-      p <- modifyList(p, modify)
+      p <- utils::modifyList(p, modify)
     }
     cholera_parameters_validate(p)
 

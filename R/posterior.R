@@ -32,9 +32,21 @@ cholera_fit_draws <- function(fit) {
         draws <- do.call(rbind, mats)
         if (!is.null(pnames)) colnames(draws) <- pnames
       } else if (length(d) == 2) {
-        pnames <- dimnames(a)[[1]]
-        draws <- t(a)
-        if (!is.null(pnames)) colnames(draws) <- pnames
+        dn <- dimnames(a)
+        rn <- dn[[1]]
+        cn <- dn[[2]]
+
+        if (!is.null(rn) && any(nzchar(rn))) {
+          # monty-style: (parameter, sample)
+          draws <- t(a)
+          colnames(draws) <- rn
+        } else if (!is.null(cn) && any(nzchar(cn))) {
+          # already in (sample, parameter) orientation
+          draws <- a
+          colnames(draws) <- cn
+        } else {
+          draws <- a
+        }
       }
     }
 
@@ -62,8 +74,11 @@ cholera_fit_draws <- function(fit) {
 
   if (is.null(colnames(draws)) || any(colnames(draws) == "")) {
     packer <- attr(fit, "packer", exact = TRUE)
-    if (!is.null(packer) && !is.null(packer$names) && length(packer$names) == ncol(draws)) {
-      colnames(draws) <- packer$names
+    if (!is.null(packer) && !is.null(packer[["names"]])) {
+      pnames <- packer[["names"]]()
+      if (!is.null(pnames) && length(pnames) == ncol(draws)) {
+        colnames(draws) <- pnames
+      }
     }
   }
   if (is.null(colnames(draws)) || any(colnames(draws) == "")) {

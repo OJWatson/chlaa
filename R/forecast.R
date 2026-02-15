@@ -91,7 +91,7 @@ cholera_forecast_from_fit <- function(fit,
     common <- intersect(names(theta), names(p))
     if (length(common) > 0) p[common] <- as.list(as.numeric(theta[common]))
 
-    if (!is.null(modify)) p <- modifyList(p, modify)
+    if (!is.null(modify)) p <- utils::modifyList(p, modify)
     cholera_parameters_validate(p)
 
     sim <- cholera_simulate(

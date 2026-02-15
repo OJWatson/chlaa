@@ -10,6 +10,7 @@ cholera_simulate(
   n_particles = 1,
   dt = 0.25,
   seed = 1,
+  which = c("simulate", "fit"),
   n_threads = 1,
   deterministic = FALSE
 )
@@ -24,6 +25,9 @@ cholera_simulate(
 \item{dt}{Discrete time step (days).}
 
 \item{seed}{RNG seed.}
+
+\item{which}{Which bundled generator to use: "simulate" (default) or "fit".
+The fit generator includes the observation model needed for filtering/likelihood.}
 
 \item{n_threads}{Threads for dust2.}
 

@@ -41,7 +41,7 @@ cholera_run_scenarios <- function(pars,
     sc <- scenarios[[i]]
     if (!inherits(sc, "cholera_scenario")) stop("All scenarios must be cholera_scenario objects", call. = FALSE)
 
-    p <- modifyList(pars, sc$modify)
+    p <- utils::modifyList(pars, sc$modify)
     cholera_parameters_validate(p)
     pars_used[[sc$name]] <<- p
 

@@ -5,6 +5,8 @@ Version: 0.1.0
 Authors@R: c(
     person("OJ", "Watson", role = c("aut", "cre"), email = "o.watson15@imperial.ac.uk")
     )
+Author: OJ Watson [aut, cre]
+Maintainer: OJ Watson <o.watson15@imperial.ac.uk>
 Description: Stochastic cholera outbreak model implemented in odin2 with a dust2 backend.
     Provides tools for fitting to outbreak data, simulating counterfactual intervention
     scenarios (vaccination, case management, and WASH), and evaluating outcomes including
