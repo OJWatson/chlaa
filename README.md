@@ -2,6 +2,8 @@
 
 Stochastic cholera outbreak simulation and anticipatory action (AA) modelling tools.
 
+This package vendors the generated dust2 C++ model code, so you can run simulation and fitting without having **odin2** installed at runtime. (odin2 is only needed to regenerate the bundled code; see `docs/packaging.md`.)
+
 ## Minimal simulation
 
 ```r

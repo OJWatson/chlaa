@@ -3,6 +3,8 @@
 This is a standalone R package implementing a stochastic cholera outbreak model in **odin2** (dust2 backend),
 with utilities for fitting, counterfactual simulation, forecasting, and health economic evaluation.
 
+End users should not need odin2 installed: the repository commits the generated C++ and bindings so simulation and fitting work from a clean checkout. odin2 is only required for developers who want to edit `inst/odin/*.R` and regenerate the bundled outputs (see `docs/packaging.md`).
+
 ## Directory layout
 
 - `DESCRIPTION`, `NAMESPACE`, `LICENSE`: standard R package metadata

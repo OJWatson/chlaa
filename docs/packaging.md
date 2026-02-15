@@ -22,7 +22,7 @@ These derived files should be treated as *generated* and should only change when
 - `R/dust.R`, `R/cpp11.R`, `src/cpp11.cpp` — generated bindings/registration.
 - `inst/odin/generation_manifest.csv` — md5 stamp used to detect drift.
 
-If these files change without a corresponding change in `inst/odin/cholera_model.R`, that is a red flag.
+If these files change without a corresponding change in `inst/odin/*.R`, that is a red flag.
 
 ## Compiled artefacts (never commit)
 
