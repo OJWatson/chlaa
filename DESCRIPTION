@@ -13,7 +13,7 @@ Description: Stochastic cholera outbreak model implemented in odin2 with a dust2
     cost-effectiveness and budget allocation.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Requires: R >= 4.0.0
+Depends: R (>= 4.1.0)
 LinkingTo:
     cpp11,
     dust2,
