@@ -42,11 +42,15 @@ jobs:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-repositories: https://mrc-ide.r-universe.dev
-          extra-packages: any::rcmdcheck
-          needs: check
+      - name: Install dependencies
+        shell: Rscript {0}
+        run: |
+          install.packages(c("remotes", "rcmdcheck"), repos = "https://cloud.r-project.org")
+          options(repos = c(
+            mrcide = "https://mrc-ide.r-universe.dev",
+            CRAN = "https://cloud.r-project.org"
+          ))
+          remotes::install_deps(dependencies = TRUE)
 
       - name: Check generated model sync
         run: make check-sync
