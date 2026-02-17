@@ -9,12 +9,18 @@ cholera_optimise_budget(
   budget,
   cost = list(cost_per_vaccine_dose = 2, cost_chlorination_per_person_day = 0.02,
     cost_hygiene_per_person_day = 0.03, cost_latrine_per_person_day = 0.01,
-    cost_cati_per_person_day = 0.05),
+    cost_cati_per_person_day = 0.05, cost_per_orc_treatment = 10, cost_per_ctc_treatment
+    = 80),
   time = 0:180,
   n_particles = 100,
   dt = 0.25,
   seed = 1,
-  grid_size = 10
+  grid_size = 10,
+  min_fraction = list(vax = 0, wash = 0, care = 0),
+  max_fraction = list(vax = 1, wash = 1, care = 1),
+  max_vax_doses_per_day = Inf,
+  max_total_doses = Inf,
+  method = c("auto", "grid", "continuous")
 )
 }
 \arguments{
@@ -33,6 +39,16 @@ cholera_optimise_budget(
 \item{seed}{Seed.}
 
 \item{grid_size}{Number of grid points per decision dimension.}
+
+\item{min_fraction}{Named list of minimum allocation fractions by intervention (`vax`, `wash`, `care`).}
+
+\item{max_fraction}{Named list of maximum allocation fractions by intervention (`vax`, `wash`, `care`).}
+
+\item{max_vax_doses_per_day}{Maximum feasible vaccination doses per day.}
+
+\item{max_total_doses}{Optional upper bound on total vaccine doses.}
+
+\item{method}{Optimisation method: "auto", "grid", or "continuous".}
 }
 \value{
 A list with best allocation and a data.frame of evaluated allocations.

@@ -1,0 +1,42 @@
+---
+title: "Fitting Workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Fitting Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+This vignette outlines a typical fit-to-data workflow for `chlaa`.
+
+```{r, eval = FALSE}
+library(chlaa)
+
+# 1) Build baseline parameters
+pars <- cholera_parameters()
+
+# 2) Prepare and validate case data
+data_raw <- data.frame(time = 1:60, cases = sample.int(10, 60, replace = TRUE) - 1L)
+data_fit <- cholera_prepare_data(data_raw)
+
+# 3) Fit with pMCMC
+fit <- cholera_fit_pmcmc(
+  data = data_fit,
+  pars = pars,
+  n_particles = 200,
+  n_steps = 2000,
+  seed = 1
+)
+
+# 4) Posterior summaries and diagnostics
+summary_tbl <- cholera_posterior_summary(fit)
+diag_report <- cholera_fit_report(fit)
+trace_plot <- cholera_plot_trace(fit, parameters = c("trans_prob", "contact_rate"))
+
+# 5) Posterior predictive checks
+ppc_plot <- cholera_plot_ppc(fit)
+```

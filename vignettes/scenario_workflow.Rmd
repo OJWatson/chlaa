@@ -1,0 +1,41 @@
+---
+title: "Scenario Workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Scenario Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+This vignette shows how to construct and compare intervention scenarios.
+
+```{r, eval = FALSE}
+library(chlaa)
+
+pars <- cholera_parameters()
+time <- 0:180
+
+# Standard operational templates
+scenarios <- cholera_standard_scenarios(
+  pars = pars,
+  trigger_time = 30,
+  horizon = max(time),
+  vax_total_doses = 280000
+)
+
+# Simulate
+runs <- cholera_run_scenarios(pars, scenarios, time = time, n_particles = 200, dt = 0.25, seed = 1)
+
+# Summaries and comparisons
+summary_tbl <- cholera_scenario_summary(runs, baseline = "baseline")
+cmp <- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE, wtp = 1500)
+
+# High-level report helper
+rep <- cholera_scenario_report(runs, baseline = "baseline", include_econ = TRUE, wtp = 1500)
+rep$plots$incidence
+rep$plots$ce_plane
+```

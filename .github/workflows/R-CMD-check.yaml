@@ -7,7 +7,15 @@ on:
 name: R-CMD-check
 
 jobs:
+  no-binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if compiled artefacts are tracked
+        run: bash tools/check_no_binaries.sh
+
   R-CMD-check:
+    needs: no-binaries
     runs-on: ${{ matrix.config.os }}
 
     name: ${{ matrix.config.os }} (R ${{ matrix.config.r }})
@@ -36,10 +44,15 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
+          extra-repositories: https://mrc-ide.r-universe.dev
           extra-packages: any::rcmdcheck
           needs: check
 
+      - name: Check generated model sync
+        run: make check-sync
+
       - uses: r-lib/actions/check-r-package@v2
         with:
+          args: 'c("--no-manual")'
           upload-snapshots: true
-          error-on: error
+          error-on: warning

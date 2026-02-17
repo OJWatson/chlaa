@@ -37,7 +37,9 @@ The following are build outputs and must never be committed:
    - `make regen` (or `Rscript tools/regenerate_model.R`)
 3. Optionally check that nothing is out of sync:
    - `make check-sync` (or `Rscript tools/check_model_sync.R`)
-4. Build/check the package.
+4. Ensure no compiled artefacts are tracked:
+   - `make check-no-binaries` (or `bash tools/check_no_binaries.sh`)
+5. Build/check the package.
 
 ## CI expectation
 

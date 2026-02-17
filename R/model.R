@@ -26,6 +26,12 @@
   ""
 }
 
+.runtime_odin2_allowed <- function() {
+  opt <- getOption("chlaa.allow_runtime_odin2", FALSE)
+  env <- Sys.getenv("CHLAA_ALLOW_RUNTIME_ODIN2", unset = "")
+  isTRUE(opt) || tolower(env) %in% c("1", "true", "t", "yes", "y")
+}
+
 # Internal: get a dust2 generator for either simulation or fitting
 cholera_generator <- function(which = c("simulate", "fit")) {
   which <- match.arg(which)
@@ -39,7 +45,16 @@ cholera_generator <- function(which = c("simulate", "fit")) {
     return(.as_dust_generator(gen))
   }
 
-  # Dev/runtime compilation fallback
+  # Dev/runtime compilation fallback (explicitly opt-in).
+  if (!.runtime_odin2_allowed()) {
+    stop(
+      "Compiled generator object not found (", obj, "). Runtime odin2 compilation is disabled.\n",
+      "Enable it only for development via options(chlaa.allow_runtime_odin2 = TRUE) ",
+      "or CHLAA_ALLOW_RUNTIME_ODIN2=true.",
+      call. = FALSE
+    )
+  }
+
   if (!requireNamespace("odin2", quietly = TRUE)) {
     stop(
       "Compiled generator object not found (", obj, "). ",

@@ -8,7 +8,8 @@ cholera_compare_scenarios(
   scenario_runs,
   baseline,
   include_econ = TRUE,
-  econ = NULL
+  econ = NULL,
+  wtp = NULL
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ cholera_compare_scenarios(
 \item{include_econ}{If TRUE, include health economic outputs (requires `cholera_health_econ()`).}
 
 \item{econ}{Optional named list of economic parameter overrides (passed to `cholera_health_econ()`).}
+
+\item{wtp}{Optional willingness-to-pay per DALY averted for NMB/INMB outputs.}
 }
 \value{
 A data.frame of scenario-level means and deltas vs baseline.

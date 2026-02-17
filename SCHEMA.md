@@ -8,12 +8,17 @@ End users should not need odin2 installed: the repository commits the generated 
 ## Directory layout
 
 - `DESCRIPTION`, `NAMESPACE`, `LICENSE`: standard R package metadata
+- `Makefile`: developer helper targets (`make regen`, `make check-sync`, `make check-no-binaries`)
 - `R/`: package code (functions)
 - `inst/odin/`: odin2 model files
   - `cholera_model.R`: simulation model
   - `cholera_model_fit.R`: adds an observation model for filtering / likelihood
 - `man/`: prebuilt documentation (keeps R CMD check quiet without roxygen)
-- `tests/`: unit tests (simulation smoke tests are opt-in via env var)
+- `tests/`: unit tests (including smoke tests for simulation and fit paths)
+- `tools/`: developer scripts for regeneration and drift checks
+- `docs/`: lightweight project docs (milestones, packaging, runner notes)
+- `vignettes/`: end-to-end analyst workflows (fit, scenarios, economics/optimisation)
+- `inst/extdata/econ/`: externalised economics defaults (unit costs and DALY parameters)
 
 ## Key files
 
@@ -89,3 +94,9 @@ Typical workflow:
 8. Forecasts:
    - `cholera_forecast_from_fit(fit, ...)`
    - `cholera_forecast_scenarios_from_fit(fit, scenarios = sc, ...)`
+
+## Guardrails
+
+- `make check-sync`: validates committed generated files against `inst/odin/generation_manifest.csv`.
+- `make check-no-binaries`: fails if compiled artefacts are tracked under `src/` or `inst/`.
+- CI runs both checks before `R CMD check`.

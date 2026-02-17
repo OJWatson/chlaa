@@ -32,9 +32,7 @@ cholera_fit_pmcmc <- function(data,
   .check_named_list(pars, "pars")
   if (!requireNamespace("monty", quietly = TRUE)) stop("monty is required for fitting", call. = FALSE)
 
-  if (!is.data.frame(data) || !all(c("time", "cases") %in% names(data))) {
-    stop("data must be a data.frame with columns 'time' and 'cases'", call. = FALSE)
-  }
+  data <- cholera_prepare_data(data, time_col = "time", cases_col = "cases")
 
   gen <- cholera_generator(which = "fit")
   # dust2 expects the filter start time to be strictly earlier than the first

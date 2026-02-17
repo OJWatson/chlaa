@@ -1,0 +1,53 @@
+---
+title: "Health Economics and Optimisation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Health Economics and Optimisation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+This vignette demonstrates economics defaults, CE outputs, and budget optimisation.
+
+```{r, eval = FALSE}
+library(chlaa)
+
+pars <- cholera_parameters()
+time <- 0:120
+
+scenarios <- list(
+  cholera_scenario("baseline", list()),
+  cholera_scenario("wash_plus_cm", list(
+    chlor_start = 10, chlor_end = 80, chlor_effect = 0.2,
+    hyg_start = 10, hyg_end = 80, hyg_effect = 0.2,
+    orc_start = 10, orc_end = 80, orc_capacity = pars$orc_capacity,
+    ctc_start = 10, ctc_end = 80, ctc_capacity = pars$ctc_capacity
+  ))
+)
+runs <- cholera_run_scenarios(pars, scenarios, time = time, n_particles = 200, dt = 0.25, seed = 1)
+
+# Load default economics assumptions
+econ <- cholera_econ_defaults()
+
+# Scenario-level economics and NMB
+cmp <- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE, econ = econ, wtp = 1500)
+
+# CEAC
+ceac_tbl <- cholera_ceac(runs, baseline = "baseline", wtp = seq(0, 3000, by = 250), econ = econ)
+
+# Constrained budget optimisation
+opt <- cholera_optimise_budget(
+  pars = pars,
+  budget = 5e5,
+  time = time,
+  n_particles = 100,
+  min_fraction = list(vax = 0.1),
+  max_fraction = list(wash = 0.6),
+  max_vax_doses_per_day = 5000
+)
+opt$best
+```

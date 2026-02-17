@@ -9,7 +9,8 @@
 #' @export
 cholera_scenario <- function(name, modify) {
   if (!is.character(name) || length(name) != 1) stop("name must be a single string", call. = FALSE)
-  .check_named_list(modify, "modify")
+  if (!is.list(modify)) stop("modify must be a list", call. = FALSE)
+  if (length(modify) > 0) .check_named_list(modify, "modify")
   structure(list(name = name, modify = modify), class = "cholera_scenario")
 }
 
@@ -57,7 +58,7 @@ cholera_run_scenarios <- function(pars,
   }
 
   res <- dplyr::bind_rows(out) |>
-    dplyr::relocate(.data$scenario, .data$time, .data$particle) |>
+    dplyr::relocate("scenario", "time", "particle") |>
     dplyr::arrange(.data$scenario, .data$time, .data$particle)
 
   attr(res, "scenario_parameters") <- pars_used
@@ -100,13 +101,15 @@ cholera_run_scenarios <- function(pars,
 #' @param baseline Baseline scenario name.
 #' @param include_econ If TRUE, include health economic outputs (requires `cholera_health_econ()`).
 #' @param econ Optional named list of economic parameter overrides (passed to `cholera_health_econ()`).
+#' @param wtp Optional willingness-to-pay per DALY averted for NMB/INMB outputs.
 #'
 #' @return A data.frame of scenario-level means and deltas vs baseline.
 #' @export
 cholera_compare_scenarios <- function(scenario_runs,
                                       baseline,
                                       include_econ = TRUE,
-                                      econ = NULL) {
+                                      econ = NULL,
+                                      wtp = NULL) {
   if (!requireNamespace("dplyr", quietly = TRUE)) {
     stop("dplyr is required for cholera_compare_scenarios()", call. = FALSE)
   }
@@ -145,12 +148,22 @@ cholera_compare_scenarios <- function(scenario_runs,
 
   base2 <- out[out$scenario == baseline, , drop = FALSE]
 
-  out |>
+  if (!is.null(wtp)) {
+    if (!is.numeric(wtp) || length(wtp) != 1 || wtp < 0) {
+      stop("wtp must be a single non-negative number", call. = FALSE)
+    }
+    out <- out |>
+      dplyr::mutate(
+        nmb = wtp * (base2$mean_dalys - .data$mean_dalys) - (.data$mean_cost - base2$mean_cost),
+        inmb = .data$nmb
+      )
+  }
+  res <- out |>
     dplyr::mutate(
       cost = .data$mean_cost,
       dalys = .data$mean_dalys,
-      cost_diff = .data$cost - base2$cost,
-      dalys_averted = base2$dalys - .data$dalys,
+      cost_diff = .data$cost - base2$mean_cost,
+      dalys_averted = base2$mean_dalys - .data$dalys,
       icer_cost_per_daly_averted = dplyr::if_else(
         .data$dalys_averted > 0,
         .data$cost_diff / .data$dalys_averted,
@@ -163,13 +176,18 @@ cholera_compare_scenarios <- function(scenario_runs,
       )
     ) |>
     dplyr::select(
-      .data$scenario,
-      .data$infections, .data$cases_symptomatic, .data$deaths,
-      .data$doses, .data$orc_treated, .data$ctc_treated,
-      .data$infections_averted, .data$cases_averted, .data$deaths_averted,
-      .data$cost, .data$dalys,
-      .data$cost_diff, .data$dalys_averted,
-      .data$icer_cost_per_daly_averted, .data$icer_cost_per_death_averted,
-      .data$mean_cost_vax, .data$mean_cost_care, .data$mean_cost_wash
+      "scenario",
+      "infections", "cases_symptomatic", "deaths",
+      "doses", "orc_treated", "ctc_treated",
+      "infections_averted", "cases_averted", "deaths_averted",
+      "cost", "dalys",
+      "cost_diff", "dalys_averted",
+      "icer_cost_per_daly_averted", "icer_cost_per_death_averted",
+      "mean_cost_vax", "mean_cost_care", "mean_cost_wash"
     )
+
+  if (!is.null(wtp)) {
+    res <- dplyr::mutate(res, nmb = out$nmb, inmb = out$inmb)
+  }
+  res
 }

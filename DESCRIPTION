@@ -20,13 +20,16 @@ LinkingTo:
     monty
 Suggests:
     odin2,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
 Imports:
     dust2,
-    squire,
     dplyr,
     tidyr,
-    plyr
+    ggplot2,
+    monty,
+    tibble
 Config/testthat/edition: 3
 Remotes:
     mrc-ide/odin2,
@@ -36,3 +39,4 @@ Remotes:
     mrc-ide/odin.dust,
     mrc-ide/squire
 RoxygenNote: 7.3.3
+VignetteBuilder: knitr
