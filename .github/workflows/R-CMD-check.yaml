@@ -59,4 +59,4 @@ jobs:
         with:
           args: 'c("--no-manual")'
           upload-snapshots: true
-          error-on: warning
+          error-on: '"warning"'
