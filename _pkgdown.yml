@@ -1,0 +1,46 @@
+url: https://ojwatson.github.io/chlaa/
+template:
+  bootstrap: 5
+
+home:
+  title: chlaa
+  description: Cholera outbreak simulation, fitting, intervention scenarios, and health economics.
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/OJWatson/chlaa
+
+reference:
+  - title: Model And Parameters
+    contents:
+      - cholera_parameters
+      - cholera_parameter_info
+      - cholera_parameters_validate
+      - cholera_simulate
+  - title: Fitting Workflow
+    contents:
+      - cholera_prepare_data
+      - cholera_fit_pmcmc
+      - cholera_fit_report
+      - cholera_fit_trace
+      - cholera_plot_trace
+      - cholera_posterior_summary
+      - cholera_plot_ppc
+  - title: Scenario Workflow
+    contents:
+      - cholera_standard_scenarios
+      - cholera_run_scenarios
+      - cholera_scenario_summary
+      - cholera_scenario_report
+      - cholera_compare_scenarios
+  - title: Economics And Optimisation
+    contents:
+      - cholera_econ_defaults
+      - cholera_health_econ
+      - cholera_ceac
+      - cholera_optimise_budget

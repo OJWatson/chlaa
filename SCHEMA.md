@@ -16,9 +16,11 @@ End users should not need odin2 installed: the repository commits the generated 
 - `man/`: prebuilt documentation (keeps R CMD check quiet without roxygen)
 - `tests/`: unit tests (including smoke tests for simulation and fit paths)
 - `tools/`: developer scripts for regeneration and drift checks
-- `docs/`: lightweight project docs (milestones, packaging, runner notes)
+- `docs/`: project documentation (model mapping, packaging notes)
 - `vignettes/`: end-to-end analyst workflows (fit, scenarios, economics/optimisation)
 - `inst/extdata/econ/`: externalised economics defaults (unit costs and DALY parameters)
+- `_pkgdown.yml`: pkgdown site configuration
+- `.github/workflows/pkgdown.yaml`: docs build/deploy workflow
 
 ## Key files
 
@@ -76,7 +78,7 @@ End users should not need odin2 installed: the repository commits the generated 
   - `cholera_health_econ()`: costs + DALYs using model accumulators
 
 - `optimise.R`
-  - `cholera_optimise_budget()`: simple grid-search budget allocation optimiser
+  - `cholera_optimise_budget()`: constrained allocation optimiser (grid/continuous modes)
 
 - `plot.R`
   - general plotting helpers and a CE plane plot

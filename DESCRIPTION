@@ -7,6 +7,8 @@ Authors@R: c(
     )
 Author: OJ Watson [aut, cre]
 Maintainer: OJ Watson <o.watson15@imperial.ac.uk>
+URL: https://github.com/OJWatson/chlaa, https://ojwatson.github.io/chlaa/
+BugReports: https://github.com/OJWatson/chlaa/issues
 Description: Stochastic cholera outbreak model implemented in odin2 with a dust2 backend.
     Provides tools for fitting to outbreak data, simulating counterfactual intervention
     scenarios (vaccination, case management, and WASH), and evaluating outcomes including
@@ -22,7 +24,8 @@ Suggests:
     odin2,
     testthat (>= 3.0.0),
     knitr,
-    rmarkdown
+    rmarkdown,
+    pkgdown
 Imports:
     dust2,
     dplyr,
