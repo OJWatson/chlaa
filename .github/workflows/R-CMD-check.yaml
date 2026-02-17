@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          eol: lf
       - name: Fail if compiled artefacts are tracked
         run: bash tools/check_no_binaries.sh
 
@@ -34,6 +36,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          eol: lf
 
       - uses: r-lib/actions/setup-pandoc@v2
 
