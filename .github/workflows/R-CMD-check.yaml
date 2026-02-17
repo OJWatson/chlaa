@@ -58,7 +58,7 @@ jobs:
             mrcide = "https://mrc-ide.r-universe.dev",
             CRAN = "https://cloud.r-project.org"
           ))
-          remotes::install_deps(dependencies = TRUE)
+          remotes::install_deps(dependencies = TRUE, upgrade = "never")
 
       - name: Check generated model sync
         run: make check-sync
