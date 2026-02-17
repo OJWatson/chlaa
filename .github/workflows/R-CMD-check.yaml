@@ -50,15 +50,19 @@ jobs:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
 
-      - name: Install dependencies
+      - name: Install non-CRAN dependencies
         shell: Rscript {0}
         run: |
-          install.packages(c("remotes", "rcmdcheck"), repos = "https://cloud.r-project.org")
           options(repos = c(
             mrcide = "https://mrc-ide.r-universe.dev",
             CRAN = "https://cloud.r-project.org"
           ))
-          remotes::install_deps(dependencies = TRUE, upgrade = "never")
+          install.packages(c("dust2", "monty", "odin2", "squire"), dependencies = TRUE)
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
 
       - name: Check generated model sync
         run: make check-sync
