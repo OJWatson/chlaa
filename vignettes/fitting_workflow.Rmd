@@ -11,86 +11,176 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-This vignette outlines a complete fit-to-data workflow for `chlaa` using a
-synthetic daily incidence time-series. The synthetic data are generated from
-the model and then observed with over-dispersed count noise, yielding a
-single-wave outbreak profile (rapid rise, short peak, gradual decline) that is
-broadly similar in shape to reported cholera outbreak curves.
+## Why This Workflow?
+
+This vignette demonstrates a full fit-to-forecast cycle with:
+
+1. A synthetic daily outbreak curve that resembles the qualitative pattern often seen in reported cholera surveillance (large first wave, suppression period, then rebound).
+2. A lightweight but fully runnable pMCMC fit.
+3. Diagnostics that show both parameter behaviour and likelihood behaviour.
+4. A forecast plot that overlays historical observations with model uncertainty bands.
+
+The goal is not to replicate any one outbreak exactly, but to show a transparent, reproducible workflow that users can adapt to real surveillance data.
 
 ```{r}
 library(chlaa)
+library(ggplot2)
 set.seed(42)
 ```
 
+## 1) Generate Example Outbreak Data
+
+We generate synthetic data with a strong first wave and a smaller later rebound. The defaults are tuned for an outbreak profile similar in shape to published response analyses.
+
 ```{r}
-# 1) Build baseline parameters
-pars <- cholera_parameters()
+example_data <- chlaa_generate_example_outbreak_data(
+  time = 1:330,
+  start_date = as.Date("2021-08-01"),
+  seed = 42
+)
+
+ggplot(example_data, aes(x = date, y = cases)) +
+  geom_line(linewidth = 0.5, colour = "black") +
+  labs(
+    x = "Date",
+    y = "Reported cholera cases/day",
+    title = "Synthetic historical outbreak series"
+  ) +
+  theme_minimal()
 ```
 
+## 2) Prepare Data And Starting Parameters
+
+We keep the input format strict (`time`, `cases`) and use a near-truth start for a stable, fast demo fit.
+
 ```{r}
-# 2) Generate synthetic observed case data (daily counts)
-# We first simulate a baseline outbreak, then add observation noise.
-time <- 1:70
-pars$contact_rate <- 4
-pars$trans_prob <- 0.015
-pars$reporting_rate <- 0.01
-pars$obs_size <- 20
+data_fit <- chlaa_prepare_data(example_data, time_col = "time", cases_col = "cases")
 
-sim_truth <- cholera_simulate(pars, time = time, n_particles = 1, dt = 1, seed = 42)
-mu_obs <- pmax(pars$reporting_rate * sim_truth$inc_symptoms, 0.01)
-cases <- rnbinom(length(mu_obs), mu = mu_obs, size = pars$obs_size)
-data_raw <- data.frame(day = time, cases = as.integer(cases))
-
-plot(data_raw$day, data_raw$cases, type = "h", lwd = 2,
-     xlab = "Day", ylab = "Reported cases",
-     main = "Synthetic cholera-like outbreak data")
+pars_start <- attr(example_data, "truth_parameters")
+pars_start$contact_rate <- pars_start$contact_rate * 0.9
+pars_start$trans_prob <- pars_start$trans_prob * 1.1
+pars_start$reporting_rate <- pars_start$reporting_rate * 0.9
 ```
 
-```{r}
-# 3) Prepare and validate case data
-data_fit <- cholera_prepare_data(data_raw, time_col = "day", cases_col = "cases")
-head(data_fit)
-```
+## 3) Fit With pMCMC
+
+For vignette runtime on CI we use a compact configuration. For real analyses, increase particles and chain length.
 
 ```{r}
-# 4) Fit with pMCMC
-# Keep settings lightweight so the vignette runs quickly in CI.
-fit <- cholera_fit_pmcmc(
+fit <- chlaa_fit_pmcmc(
   data = data_fit,
-  pars = pars,
-  n_particles = 50,
-  n_steps = 250,
+  pars = pars_start,
+  n_particles = 60,
+  n_steps = 220,
   seed = 42,
   proposal_var = 1e-5
 )
 fit
 ```
 
+## 4) Summaries And Diagnostics
+
+We inspect acceptance, traces, pairwise posterior geometry, and likelihood trace.
+
 ```{r}
-# 5) Posterior summaries and diagnostics
-summary_tbl <- cholera_posterior_summary(fit, burnin = 0.3, thin = 2)
+fit_report <- chlaa_fit_report(fit, burnin = 0.25, thin = 2)
+fit_report$acceptance_rate
+```
+
+```{r}
+summary_tbl <- chlaa_posterior_summary(fit, burnin = 0.25, thin = 2)
 summary_tbl
 ```
 
 ```{r}
-diag_report <- cholera_fit_report(fit, burnin = 0.3, thin = 2)
-diag_report$acceptance_rate
-```
-
-```{r}
-trace_plot <- cholera_plot_trace(fit, parameters = c("trans_prob", "contact_rate"))
-trace_plot
-```
-
-```{r}
-# 6) Posterior predictive checks
-ppc_plot <- cholera_plot_ppc(
+chlaa_plot_trace(
   fit,
-  data = data_fit,
-  n_draws = 40,
-  burnin = 0.3,
-  thin = 2,
-  seed = 42
+  parameters = c("trans_prob", "contact_rate", "reporting_rate", "obs_size"),
+  burnin = 0.25,
+  thin = 2
 )
-ppc_plot
 ```
+
+```{r}
+chlaa_plot_likelihood_trace(fit, burnin = 0.25, thin = 2)
+```
+
+```{r}
+chlaa_plot_parameter_pairs(
+  fit,
+  parameters = c("trans_prob", "contact_rate", "reporting_rate", "obs_size"),
+  burnin = 0.25,
+  thin = 2,
+  max_points = 1000
+)
+```
+
+```{r}
+chlaa_plot_parameter_vs_likelihood(
+  fit,
+  parameters = c("trans_prob", "contact_rate", "reporting_rate"),
+  burnin = 0.25,
+  thin = 2,
+  max_points = 1000
+)
+```
+
+## 5) Posterior Predictive Fit And Projection
+
+We forecast beyond the observed horizon and plot central tendency plus 50%, 75%, and 95% uncertainty intervals.
+
+```{r}
+forecast_time <- 1:400
+fc <- chlaa_forecast_from_fit(
+  fit = fit,
+  pars = pars_start,
+  time = forecast_time,
+  vars = "inc_symptoms",
+  include_cases = TRUE,
+  quantiles = c(0.025, 0.125, 0.25, 0.5, 0.75, 0.875, 0.975),
+  n_draws = 80,
+  burnin = 0.25,
+  thin = 2,
+  seed = 42,
+  dt = 1,
+  n_particles = 1
+)
+
+f_cases <- fc[fc$variable == "cases", ]
+f_cases$date <- as.Date("2021-08-01") + (f_cases$time - 1)
+obs <- example_data
+obs$date <- as.Date(obs$date)
+
+ggplot() +
+  geom_line(data = obs, aes(x = date, y = cases, colour = "Historical data"), linewidth = 0.5) +
+  geom_line(data = f_cases, aes(x = date, y = mean, colour = "Mean projection"), linewidth = 0.7) +
+  geom_line(data = f_cases, aes(x = date, y = q0p25, colour = "50% UI"), linewidth = 0.5) +
+  geom_line(data = f_cases, aes(x = date, y = q0p75, colour = "50% UI"), linewidth = 0.5) +
+  geom_line(data = f_cases, aes(x = date, y = q0p125, colour = "75% UI"), linewidth = 0.4, linetype = 2) +
+  geom_line(data = f_cases, aes(x = date, y = q0p875, colour = "75% UI"), linewidth = 0.4, linetype = 2) +
+  geom_line(data = f_cases, aes(x = date, y = q0p025, colour = "95% UI"), linewidth = 0.4) +
+  geom_line(data = f_cases, aes(x = date, y = q0p975, colour = "95% UI"), linewidth = 0.4) +
+  scale_colour_manual(values = c(
+    "Historical data" = "black",
+    "Mean projection" = "#2c7f62",
+    "50% UI" = "#b88a66",
+    "75% UI" = "#8c8c8c",
+    "95% UI" = "#9a3b32"
+  )) +
+  labs(
+    x = "Date",
+    y = "No. of cholera cases/day",
+    colour = NULL,
+    title = "Historical data and fitted model projection"
+  ) +
+  theme_minimal()
+```
+
+## Interpretation
+
+In this synthetic example, the model reproduces the broad outbreak dynamics and uncertainty envelope. On real data, you would next:
+
+1. Run longer chains and multiple seeds.
+2. Check convergence diagnostics more formally.
+3. Stress-test assumptions (reporting process, intervention windows, and priors).
+4. Carry posterior uncertainty through scenario and economic analyses.

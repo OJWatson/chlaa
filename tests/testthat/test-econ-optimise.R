@@ -1,34 +1,34 @@
 test_that("economics defaults load and can be overridden", {
-  d <- cholera_econ_defaults()
+  d <- chlaa_econ_defaults()
   expect_true(is.list(d))
   expect_true(all(c("cost_per_vaccine_dose", "dw_symptomatic", "yll_per_death") %in% names(d)))
 
-  d2 <- cholera_econ_defaults(overrides = list(cost_per_vaccine_dose = 3.5))
+  d2 <- chlaa_econ_defaults(overrides = list(cost_per_vaccine_dose = 3.5))
   expect_equal(d2$cost_per_vaccine_dose, 3.5)
 })
 
 test_that("ce outputs include NMB and CEAC", {
   skip_if_not_installed("dust2")
-  pars <- cholera_parameters()
+  pars <- chlaa_parameters()
   sc <- list(
-    cholera_scenario("baseline", list()),
-    cholera_scenario("intervention", list(chlor_start = 0, chlor_end = 30, chlor_effect = 0.2))
+    chlaa_scenario("baseline", list()),
+    chlaa_scenario("intervention", list(chlor_start = 0, chlor_end = 30, chlor_effect = 0.2))
   )
-  runs <- cholera_run_scenarios(pars, sc, time = 0:25, n_particles = 4, dt = 1, seed = 1)
+  runs <- chlaa_run_scenarios(pars, sc, time = 0:25, n_particles = 4, dt = 1, seed = 1)
 
-  cmp <- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE, wtp = 1000)
+  cmp <- chlaa_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE, wtp = 1000)
   expect_true(all(c("nmb", "inmb", "cost_diff", "dalys_averted") %in% names(cmp)))
 
-  ce <- cholera_ceac(runs, baseline = "baseline", wtp = c(0, 500, 1000))
+  ce <- chlaa_ceac(runs, baseline = "baseline", wtp = c(0, 500, 1000))
   expect_true(is.data.frame(ce))
   expect_true(all(c("scenario", "wtp", "prob_best") %in% names(ce)))
 })
 
 test_that("optimiser respects constraints and returns evaluations", {
   skip_if_not_installed("dust2")
-  pars <- cholera_parameters()
+  pars <- chlaa_parameters()
 
-  opt <- cholera_optimise_budget(
+  opt <- chlaa_optimise_budget(
     pars = pars,
     budget = 100000,
     time = 0:20,

@@ -1,6 +1,6 @@
 # Counterfactual grid utilities
 
-.cholera_num_tag <- function(x, digits = 3) {
+.chlaa_num_tag <- function(x, digits = 3) {
   if (is.integer(x)) return(as.character(x))
   if (!is.numeric(x)) return(as.character(x))
   s <- format(round(x, digits = digits), trim = TRUE, scientific = FALSE)
@@ -9,10 +9,10 @@
   s
 }
 
-.cholera_make_name <- function(prefix, row) {
+.chlaa_make_name <- function(prefix, row) {
   parts <- c(prefix)
   for (nm in names(row)) {
-    parts <- c(parts, paste0(nm, .cholera_num_tag(row[[nm]])))
+    parts <- c(parts, paste0(nm, .chlaa_num_tag(row[[nm]])))
   }
   nm <- paste(parts, collapse = "_")
   gsub("[^A-Za-z0-9_]+", "", nm)
@@ -38,7 +38,7 @@
 #'
 #' @return A data.frame with columns: scenario, modify, and knob columns.
 #' @export
-cholera_counterfactual_grid <- function(trigger_time,
+chlaa_counterfactual_grid <- function(trigger_time,
                                        horizon,
                                        aa_start_offset = 0,
                                        wash_duration = 120,
@@ -86,8 +86,8 @@ cholera_counterfactual_grid <- function(trigger_time,
 
     aa_start <- trigger_time + as.numeric(r$aa_start_offset)
 
-    w_wash <- .cholera_window(aa_start, as.numeric(r$wash_duration), horizon = horizon)
-    w_care <- .cholera_window(aa_start, as.numeric(r$care_duration), horizon = horizon)
+    w_wash <- .chlaa_window(aa_start, as.numeric(r$wash_duration), horizon = horizon)
+    w_care <- .chlaa_window(aa_start, as.numeric(r$care_duration), horizon = horizon)
 
     m <- list(
       chlor_start = w_wash$start, chlor_end = w_wash$end, chlor_effect = as.numeric(r$chlor_effect),
@@ -109,14 +109,14 @@ cholera_counterfactual_grid <- function(trigger_time,
         vax2_start = 0, vax2_end = 0, vax2_total_doses = 0, vax2_doses_per_day = 0
       ))
     } else if (reg == "1dose") {
-      plan <- .cholera_make_vax_plan(
+      plan <- .chlaa_make_vax_plan(
         N = 1, trigger_time = aa_start, total_doses = doses,
         regimen = "1dose", delay = delay, campaign_days = vax_campaign_days,
         dose_interval = vax_dose_interval, horizon = horizon
       )
       m <- c(m, plan)
     } else if (reg == "2dose") {
-      plan <- .cholera_make_vax_plan(
+      plan <- .chlaa_make_vax_plan(
         N = 1, trigger_time = aa_start, total_doses = doses,
         regimen = "2dose", delay = delay, campaign_days = vax_campaign_days,
         dose_interval = vax_dose_interval, horizon = horizon
@@ -135,7 +135,7 @@ cholera_counterfactual_grid <- function(trigger_time,
       orc = r$orc_capacity,
       ctc = r$ctc_capacity
     )
-    scenario[[i]] <- .cholera_make_name(prefix, name_fields)
+    scenario[[i]] <- .chlaa_make_name(prefix, name_fields)
   }
 
   res <- grid
@@ -150,11 +150,11 @@ cholera_counterfactual_grid <- function(trigger_time,
 
 #' Convert a counterfactual grid to scenario objects
 #'
-#' @param grid Output from `cholera_counterfactual_grid()`.
+#' @param grid Output from `chlaa_counterfactual_grid()`.
 #'
-#' @return A list of `cholera_scenario` objects.
+#' @return A list of `chlaa_scenario` objects.
 #' @export
-cholera_scenarios_from_grid <- function(grid) {
+chlaa_scenarios_from_grid <- function(grid) {
   if (!is.data.frame(grid)) stop("grid must be a data.frame", call. = FALSE)
   if (!all(c("scenario", "modify") %in% names(grid))) {
     stop("grid must contain columns scenario and modify", call. = FALSE)
@@ -162,7 +162,7 @@ cholera_scenarios_from_grid <- function(grid) {
 
   out <- vector("list", nrow(grid))
   for (i in seq_len(nrow(grid))) {
-    out[[i]] <- cholera_scenario(grid$scenario[[i]], grid$modify[[i]])
+    out[[i]] <- chlaa_scenario(grid$scenario[[i]], grid$modify[[i]])
   }
   out
 }
@@ -170,16 +170,16 @@ cholera_scenarios_from_grid <- function(grid) {
 #' Run a counterfactual grid (convenience)
 #'
 #' @param pars Baseline parameter list.
-#' @param grid Counterfactual grid from `cholera_counterfactual_grid()`.
+#' @param grid Counterfactual grid from `chlaa_counterfactual_grid()`.
 #' @param time Simulation times.
 #' @param baseline_name Name of baseline scenario to include.
 #' @param n_particles Particles per scenario.
 #' @param dt Time step.
 #' @param seed Seed.
 #'
-#' @return Output of `cholera_run_scenarios()` (baseline + all grid scenarios).
+#' @return Output of `chlaa_run_scenarios()` (baseline + all grid scenarios).
 #' @export
-cholera_run_counterfactual_grid <- function(pars,
+chlaa_run_counterfactual_grid <- function(pars,
                                            grid,
                                            time,
                                            baseline_name = "baseline",
@@ -187,9 +187,9 @@ cholera_run_counterfactual_grid <- function(pars,
                                            dt = 0.25,
                                            seed = 1) {
   .check_named_list(pars, "pars")
-  sc_base <- cholera_scenario(baseline_name, list())
-  sc_grid <- cholera_scenarios_from_grid(grid)
-  cholera_run_scenarios(
+  sc_base <- chlaa_scenario(baseline_name, list())
+  sc_grid <- chlaa_scenarios_from_grid(grid)
+  chlaa_run_scenarios(
     pars = pars,
     scenarios = c(list(sc_base), sc_grid),
     time = time,

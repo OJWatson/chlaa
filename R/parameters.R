@@ -19,7 +19,7 @@
 #'
 #' @return A data.frame with columns: name, default, units, description, source.
 #' @export
-cholera_parameter_info <- function() {
+chlaa_parameter_info <- function() {
   src <- "Aligned to odin model defaults (review against paper and Table S1)"
 
   rows <- list(
@@ -120,15 +120,15 @@ cholera_parameter_info <- function() {
 
 #' Create a parameter list for the cholera model
 #'
-#' Uses defaults from `cholera_parameter_info()` and allows overriding via `...`.
+#' Uses defaults from `chlaa_parameter_info()` and allows overriding via `...`.
 #'
 #' @param ... Named parameter overrides, e.g. `Sev0 = 3`, `N = 250000`.
 #' @param validate Logical; validate the resulting parameter list.
 #'
 #' @return A named list of parameters.
 #' @export
-cholera_parameters <- function(..., validate = TRUE) {
-  info <- cholera_parameter_info()
+chlaa_parameters <- function(..., validate = TRUE) {
+  info <- chlaa_parameter_info()
   out <- as.list(info$default)
   names(out) <- info$name
 
@@ -144,7 +144,7 @@ cholera_parameters <- function(..., validate = TRUE) {
     out[names(overrides)] <- overrides
   }
 
-  if (isTRUE(validate)) cholera_parameters_validate(out)
+  if (isTRUE(validate)) chlaa_parameters_validate(out)
   out
 }
 
@@ -154,9 +154,9 @@ cholera_parameters <- function(..., validate = TRUE) {
 #'
 #' @return Invisibly returns `pars` if valid, otherwise errors.
 #' @export
-cholera_parameters_validate <- function(pars) {
+chlaa_parameters_validate <- function(pars) {
   .check_named_list(pars, "pars")
-  req <- cholera_parameter_info()$name
+  req <- chlaa_parameter_info()$name
   missing <- setdiff(req, names(pars))
   if (length(missing) > 0) {
     stop("Missing parameters: ", paste(missing, collapse = ", "), call. = FALSE)
@@ -220,9 +220,9 @@ cholera_parameters_validate <- function(pars) {
 #'
 #' @return A data.frame joining values to metadata.
 #' @export
-cholera_parameters_print <- function(pars) {
+chlaa_parameters_print <- function(pars) {
   .check_named_list(pars, "pars")
-  info <- cholera_parameter_info()
+  info <- chlaa_parameter_info()
   info$value <- vapply(info$name, function(nm) as.numeric(pars[[nm]]), numeric(1))
   info
 }

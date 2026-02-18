@@ -36,7 +36,7 @@
 #'
 #' @return A list with best allocation and a data.frame of evaluated allocations.
 #' @export
-cholera_optimise_budget <- function(pars,
+chlaa_optimise_budget <- function(pars,
                                    budget,
                                    cost = list(
                                      cost_per_vaccine_dose = 2.0,
@@ -113,9 +113,9 @@ cholera_optimise_budget <- function(pars,
     p$orc_start <- min(time); p$orc_end <- max(time) + 1; p$orc_capacity <- pars$orc_capacity * care_scale
     p$ctc_start <- min(time); p$ctc_end <- max(time) + 1; p$ctc_capacity <- pars$ctc_capacity * care_scale
 
-    cholera_parameters_validate(p)
+    chlaa_parameters_validate(p)
 
-    sim <- cholera_simulate(p, time = time, n_particles = n_particles, dt = dt, seed = i_seed)
+    sim <- chlaa_simulate(p, time = time, n_particles = n_particles, dt = dt, seed = i_seed)
     end_time <- max(sim$time)
     end <- sim[sim$time == end_time, , drop = FALSE]
     deaths <- mean(end$cum_deaths)

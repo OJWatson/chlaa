@@ -16,7 +16,7 @@
 
 #' Plot scenario forecast summaries
 #'
-#' Works with output from `cholera_forecast_scenarios_from_fit()`.
+#' Works with output from `chlaa_forecast_scenarios_from_fit()`.
 #'
 #' @param forecast Scenario forecast table.
 #' @param var Variable to plot (e.g. "cases", "inc_symptoms", "cum_deaths").
@@ -31,7 +31,7 @@
 #'
 #' @return A ggplot object.
 #' @export
-cholera_plot_scenario_forecasts <- function(forecast,
+chlaa_plot_scenario_forecasts <- function(forecast,
                                             var,
                                             type = c("absolute", "difference"),
                                             scenarios = NULL,

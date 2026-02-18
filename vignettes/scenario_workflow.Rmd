@@ -11,52 +11,130 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-This vignette shows how to construct and compare intervention scenarios.
+## Why This Workflow?
+
+This vignette shows how to move from a baseline simulation to operational scenarios,
+with emphasis on clear comparisons:
+
+1. Trigger detection.
+2. Snapshot branching (counterfactuals from a shared epidemic state).
+3. Overlay plots and baseline-difference plots.
+4. Compact scenario summary tables.
 
 ```{r}
 library(chlaa)
+library(ggplot2)
 set.seed(1)
 ```
 
-```{r}
-pars <- cholera_parameters()
-time <- 0:60
-```
+## 1) Baseline Preview And Trigger Time
+
+We use a simple threshold trigger (`15` daily cases) as an example operational rule.
 
 ```{r}
-# Standard operational templates
-scenarios <- cholera_standard_scenarios(
+pars <- chlaa_parameters()
+time_preview <- 0:260
+
+baseline_preview <- chlaa_simulate(
+  pars,
+  time = time_preview,
+  n_particles = 40,
+  dt = 1,
+  seed = 1
+)
+
+trigger_time <- chlaa_trigger_time_from_sim(
+  baseline_preview,
+  threshold = 15,
+  var = "inc_symptoms"
+)
+trigger_time
+```
+
+## 2) Build Standard Scenario Set
+
+```{r}
+scenarios <- chlaa_standard_scenarios(
   pars = pars,
-  trigger_time = 14,
-  horizon = max(time),
+  trigger_time = trigger_time,
+  horizon = max(time_preview),
   vax_total_doses = 60000
 )
 vapply(scenarios, `[[`, character(1), "name")
 ```
 
+## 3) Branch Counterfactuals From A Shared Snapshot
+
+Snapshot branching keeps pre-trigger epidemic history identical across scenarios,
+which improves interpretability of differences after the intervention start.
+
 ```{r}
-# Simulate
-runs <- cholera_run_scenarios(pars, scenarios, time = time, n_particles = 25, dt = 1, seed = 1)
+snap <- chlaa_snapshot_create(
+  pars = pars,
+  snapshot_time = trigger_time,
+  n_particles = 40,
+  dt = 1,
+  seed = 1
+)
+
+post_time <- trigger_time:max(time_preview)
+runs <- chlaa_run_scenarios_from_snapshot(
+  snapshot = snap,
+  pars = pars,
+  scenarios = scenarios,
+  time = post_time
+)
+
 head(runs)
 ```
 
+## 4) Compare Scenario Trajectories
+
 ```{r}
-# Summaries and comparisons
-summary_tbl <- cholera_scenario_summary(runs, baseline = "baseline")
+chlaa_plot_scenario_overlay(runs, var = "inc_symptoms")
+```
+
+```{r}
+chlaa_plot_difference_vs_baseline(
+  runs,
+  baseline = "baseline",
+  var = "inc_symptoms",
+  cumulative = FALSE
+)
+```
+
+```{r}
+chlaa_plot_difference_vs_baseline(
+  runs,
+  baseline = "baseline",
+  var = "inc_symptoms",
+  cumulative = TRUE
+)
+```
+
+## 5) Summaries For Decision Support
+
+```{r}
+summary_tbl <- chlaa_scenario_summary(runs, baseline = "baseline")
 summary_tbl
 ```
 
 ```{r}
-cmp <- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE, wtp = 1500)
+cmp <- chlaa_compare_scenarios(
+  runs,
+  baseline = "baseline",
+  include_econ = TRUE,
+  wtp = 1500
+)
 cmp
 ```
 
 ```{r}
-# High-level report helper
-rep <- cholera_scenario_report(runs, baseline = "baseline", include_econ = TRUE, wtp = 1500)
-rep$plots$incidence
+chlaa_plot_scenarios(cmp, metric = "deaths_averted")
 ```
 
-```{r}
-rep$plots$ce_plane
-```
+## Interpretation
+
+Use this pattern when you need transparent post-trigger comparisons. For full
+posterior scenario forecasting, use `chlaa_forecast_scenarios_from_fit()` and
+`chlaa_plot_scenario_forecasts()`.

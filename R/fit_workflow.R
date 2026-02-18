@@ -10,7 +10,7 @@
 #'
 #' @return A data.frame with columns `time` and `cases`.
 #' @export
-cholera_prepare_data <- function(data,
+chlaa_prepare_data <- function(data,
                                  time_col = "time",
                                  cases_col = "cases",
                                  expected_step = NULL,
@@ -68,23 +68,23 @@ cholera_prepare_data <- function(data,
 
 #' Summarise fit diagnostics and posterior summaries
 #'
-#' @param fit A `cholera_fit` object.
+#' @param fit A `chlaa_fit` object.
 #' @param burnin Burn-in proportion or count.
 #' @param thin Thinning interval.
 #' @param probs Quantiles for posterior summary.
 #'
 #' @return A list with acceptance rate, iterations retained, posterior summary, and trace data.
 #' @export
-cholera_fit_report <- function(fit, burnin = 0.5, thin = 1, probs = c(0.025, 0.5, 0.975)) {
-  fit <- cholera_as_fit(fit)
-  draws <- cholera_fit_select_iterations(cholera_fit_draws(fit), burnin = burnin, thin = thin)
+chlaa_fit_report <- function(fit, burnin = 0.5, thin = 1, probs = c(0.025, 0.5, 0.975)) {
+  fit <- chlaa_as_fit(fit)
+  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
   if (nrow(draws) < 2) stop("Need at least 2 retained iterations for diagnostics", call. = FALSE)
 
   step_changed <- apply(abs(diff(draws)) > 0, 1, any)
   acceptance_rate <- mean(step_changed)
 
-  trace <- cholera_fit_trace(fit, burnin = burnin, thin = thin)
-  summ <- cholera_posterior_summary(fit, burnin = burnin, thin = thin, probs = probs)
+  trace <- chlaa_fit_trace(fit, burnin = burnin, thin = thin)
+  summ <- chlaa_posterior_summary(fit, burnin = burnin, thin = thin, probs = probs)
 
   list(
     acceptance_rate = acceptance_rate,
@@ -97,16 +97,16 @@ cholera_fit_report <- function(fit, burnin = 0.5, thin = 1, probs = c(0.025, 0.5
 
 #' Extract a long trace data frame from posterior draws
 #'
-#' @param fit A `cholera_fit` object.
+#' @param fit A `chlaa_fit` object.
 #' @param burnin Burn-in proportion or count.
 #' @param thin Thinning interval.
 #' @param parameters Optional vector of parameter names to keep.
 #'
 #' @return A long data.frame with columns `iteration`, `parameter`, `value`.
 #' @export
-cholera_fit_trace <- function(fit, burnin = 0.0, thin = 1, parameters = NULL) {
-  fit <- cholera_as_fit(fit)
-  draws <- cholera_fit_select_iterations(cholera_fit_draws(fit), burnin = burnin, thin = thin)
+chlaa_fit_trace <- function(fit, burnin = 0.0, thin = 1, parameters = NULL) {
+  fit <- chlaa_as_fit(fit)
+  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
 
   if (!is.null(parameters)) {
     keep <- intersect(parameters, colnames(draws))
@@ -127,16 +127,16 @@ cholera_fit_trace <- function(fit, burnin = 0.0, thin = 1, parameters = NULL) {
 
 #' Plot fit traces for selected parameters
 #'
-#' @param fit A `cholera_fit` object.
+#' @param fit A `chlaa_fit` object.
 #' @param parameters Optional subset of parameter names.
 #' @param burnin Burn-in proportion or count.
 #' @param thin Thinning interval.
 #'
 #' @return A ggplot object.
 #' @export
-cholera_plot_trace <- function(fit, parameters = NULL, burnin = 0.0, thin = 1) {
+chlaa_plot_trace <- function(fit, parameters = NULL, burnin = 0.0, thin = 1) {
   .require_suggested("ggplot2")
-  tr <- cholera_fit_trace(fit, burnin = burnin, thin = thin, parameters = parameters)
+  tr <- chlaa_fit_trace(fit, burnin = burnin, thin = thin, parameters = parameters)
 
   ggplot2::ggplot(tr, ggplot2::aes(x = .data$iteration, y = .data$value)) +
     ggplot2::geom_line(alpha = 0.7) +

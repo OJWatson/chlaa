@@ -7,11 +7,11 @@
 #'
 #' If column names are missing, it will try to use `attr(fit, "packer")$names`.
 #'
-#' @param fit Fit object returned by `cholera_fit_pmcmc()` (or compatible).
+#' @param fit Fit object returned by `chlaa_fit_pmcmc()` (or compatible).
 #'
 #' @return A numeric matrix with column names (iterations x parameters).
 #' @export
-cholera_fit_draws <- function(fit) {
+chlaa_fit_draws <- function(fit) {
   draws <- NULL
 
   if (is.matrix(fit)) {
@@ -96,7 +96,7 @@ cholera_fit_draws <- function(fit) {
 #'
 #' @return A matrix subset of draws.
 #' @export
-cholera_fit_select_iterations <- function(draws, burnin = 0.5, thin = 1) {
+chlaa_fit_select_iterations <- function(draws, burnin = 0.5, thin = 1) {
   if (!is.matrix(draws)) stop("draws must be a matrix", call. = FALSE)
   if (!is.numeric(thin) || length(thin) != 1 || thin < 1) stop("thin must be >= 1", call. = FALSE)
 
@@ -119,7 +119,7 @@ cholera_fit_select_iterations <- function(draws, burnin = 0.5, thin = 1) {
 
 #' Update a parameter list using posterior information from a fit
 #'
-#' @param fit Fit object returned by `cholera_fit_pmcmc()`.
+#' @param fit Fit object returned by `chlaa_fit_pmcmc()`.
 #' @param pars Baseline parameter list.
 #' @param draw Which posterior summary to use: "mean", "median", "sample", or "index".
 #' @param burnin Burn-in, proportion or integer count.
@@ -130,7 +130,7 @@ cholera_fit_select_iterations <- function(draws, burnin = 0.5, thin = 1) {
 #'
 #' @return A named list of parameters.
 #' @export
-cholera_update_from_fit <- function(fit,
+chlaa_update_from_fit <- function(fit,
                                    pars,
                                    draw = c("median", "mean", "sample", "index"),
                                    burnin = 0.5,
@@ -141,8 +141,8 @@ cholera_update_from_fit <- function(fit,
   draw <- match.arg(draw)
   .check_named_list(pars, "pars")
 
-  draws <- cholera_fit_draws(fit)
-  draws2 <- cholera_fit_select_iterations(draws, burnin = burnin, thin = thin)
+  draws <- chlaa_fit_draws(fit)
+  draws2 <- chlaa_fit_select_iterations(draws, burnin = burnin, thin = thin)
   if (nrow(draws2) < 1) stop("No posterior iterations remaining after burn-in/thinning.", call. = FALSE)
 
   theta <- switch(
@@ -173,18 +173,18 @@ cholera_update_from_fit <- function(fit,
   }
   out[names(theta)] <- as.list(theta)
 
-  if (isTRUE(validate)) cholera_parameters_validate(out)
+  if (isTRUE(validate)) chlaa_parameters_validate(out)
   out
 }
 
 #' Create AA scenario set using a fitted posterior baseline
 #'
-#' Convenience wrapper: updates parameters from posterior draws and calls `cholera_make_aa_scenarios()`.
+#' Convenience wrapper: updates parameters from posterior draws and calls `chlaa_make_aa_scenarios()`.
 #'
 #' @param fit Fit object.
 #' @param pars Baseline parameter list.
-#' @param draw Posterior draw selection passed to `cholera_update_from_fit()`.
-#' @param burnin,thin,seed Passed to `cholera_update_from_fit()`.
+#' @param draw Posterior draw selection passed to `chlaa_update_from_fit()`.
+#' @param burnin,thin,seed Passed to `chlaa_update_from_fit()`.
 #' @param trigger_time Optional explicit trigger time.
 #' @param trigger_threshold If trigger_time is NULL, derive from baseline simulation using this threshold.
 #' @param trigger_time_var Variable used for thresholding (default `inc_symptoms`).
@@ -192,11 +192,11 @@ cholera_update_from_fit <- function(fit,
 #' @param trigger_sim_particles Particles used for baseline simulation when deriving trigger.
 #' @param dt Model time step.
 #' @param horizon Optional cap on intervention end times.
-#' @param ... Other arguments forwarded to `cholera_make_aa_scenarios()` (e.g. vax_total_doses).
+#' @param ... Other arguments forwarded to `chlaa_make_aa_scenarios()` (e.g. vax_total_doses).
 #'
 #' @return A list of scenarios with attribute `baseline_pars`.
 #' @export
-cholera_make_aa_scenarios_from_fit <- function(fit,
+chlaa_make_aa_scenarios_from_fit <- function(fit,
                                                pars,
                                                draw = c("median", "mean", "sample", "index"),
                                                burnin = 0.5,
@@ -212,7 +212,7 @@ cholera_make_aa_scenarios_from_fit <- function(fit,
                                                ...) {
   draw <- match.arg(draw)
 
-  pars_fit <- cholera_update_from_fit(
+  pars_fit <- chlaa_update_from_fit(
     fit = fit, pars = pars, draw = draw,
     burnin = burnin, thin = thin, seed = seed,
     validate = TRUE
@@ -221,17 +221,17 @@ cholera_make_aa_scenarios_from_fit <- function(fit,
   if (is.null(horizon)) horizon <- max(trigger_sim_time) + 1
 
   if (is.null(trigger_time)) {
-    base_sim <- cholera_simulate(
+    base_sim <- chlaa_simulate(
       pars_fit, time = trigger_sim_time,
       n_particles = trigger_sim_particles, dt = dt, seed = seed
     )
-    trigger_time <- cholera_trigger_time_from_sim(
+    trigger_time <- chlaa_trigger_time_from_sim(
       base_sim, threshold = trigger_threshold, var = trigger_time_var
     )
     if (is.na(trigger_time)) stop("Trigger threshold was never reached in the baseline simulation.", call. = FALSE)
   }
 
-  sc <- cholera_make_aa_scenarios(
+  sc <- chlaa_make_aa_scenarios(
     pars = pars_fit,
     trigger_time = trigger_time,
     horizon = horizon,
@@ -256,7 +256,7 @@ cholera_make_aa_scenarios_from_fit <- function(fit,
 #'
 #' @return A data.frame with columns: draw, time, particle, plus model variables.
 #' @export
-cholera_simulate_posterior <- function(fit,
+chlaa_simulate_posterior <- function(fit,
                                       pars,
                                       time,
                                       n_draws = 50,
@@ -267,8 +267,8 @@ cholera_simulate_posterior <- function(fit,
                                       n_particles = 1) {
   if (!requireNamespace("dplyr", quietly = TRUE)) stop("dplyr is required", call. = FALSE)
 
-  draws <- cholera_fit_draws(fit)
-  draws2 <- cholera_fit_select_iterations(draws, burnin = burnin, thin = thin)
+  draws <- chlaa_fit_draws(fit)
+  draws2 <- chlaa_fit_select_iterations(draws, burnin = burnin, thin = thin)
   if (nrow(draws2) < 1) stop("No posterior iterations remaining after burn-in/thinning.", call. = FALSE)
 
   set.seed(seed)
@@ -280,9 +280,9 @@ cholera_simulate_posterior <- function(fit,
     p <- pars
     common <- intersect(names(theta), names(p))
     p[common] <- as.list(as.numeric(theta[common]))
-    cholera_parameters_validate(p)
+    chlaa_parameters_validate(p)
 
-    sim <- cholera_simulate(p, time = time, n_particles = n_particles, dt = dt, seed = seed + i)
+    sim <- chlaa_simulate(p, time = time, n_particles = n_particles, dt = dt, seed = seed + i)
     sim$draw <- i
     out[[i]] <- sim
   }

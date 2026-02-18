@@ -9,8 +9,8 @@ This package vendors the generated dust2 C++ model code, so you can run simulati
 ```r
 library(chlaa)
 
-pars <- cholera_parameters(Sev0 = 2)
-sim <- cholera_simulate(pars, time = 0:180, n_particles = 50, dt = 0.25, seed = 1)
+pars <- chlaa_parameters(Sev0 = 2)
+sim <- chlaa_simulate(pars, time = 0:180, n_particles = 50, dt = 0.25, seed = 1)
 sim 
 ```
 

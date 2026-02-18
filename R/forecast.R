@@ -12,8 +12,8 @@
 #' - `obs_model = "nbinom"`: sample Negative Binomial noise
 #' - `obs_model = "mean"`: use mu directly
 #'
-#' @param fit A `cholera_fit` object (or compatible).
-#' @param pars Baseline parameter list. If NULL, uses `attr(fit, "start_pars")`, otherwise `cholera_parameters()`.
+#' @param fit A `chlaa_fit` object (or compatible).
+#' @param pars Baseline parameter list. If NULL, uses `attr(fit, "start_pars")`, otherwise `chlaa_parameters()`.
 #' @param time Vector of times to simulate.
 #' @param vars Character vector of model variables to summarise.
 #' @param include_cases Logical; include predicted observed cases as variable "cases".
@@ -31,7 +31,7 @@
 #'
 #' @return A tidy data.frame with columns: time, variable, mean, quantiles, n_samples.
 #' @export
-cholera_forecast_from_fit <- function(fit,
+chlaa_forecast_from_fit <- function(fit,
                                       pars = NULL,
                                       time = NULL,
                                       vars = c("inc_symptoms", "cum_symptoms", "cum_deaths"),
@@ -48,7 +48,7 @@ cholera_forecast_from_fit <- function(fit,
                                       deterministic = FALSE,
                                       modify = NULL) {
   obs_model <- match.arg(obs_model)
-  fit <- cholera_as_fit(fit)
+  fit <- chlaa_as_fit(fit)
 
   if (is.null(time)) {
     dat <- attr(fit, "data", exact = TRUE)
@@ -62,14 +62,14 @@ cholera_forecast_from_fit <- function(fit,
 
   if (is.null(pars)) {
     pars <- attr(fit, "start_pars", exact = TRUE)
-    if (is.null(pars)) pars <- cholera_parameters()
+    if (is.null(pars)) pars <- chlaa_parameters()
   }
   .check_named_list(pars, "pars")
-  cholera_parameters_validate(pars)
+  chlaa_parameters_validate(pars)
 
   if (!is.null(modify)) .check_named_list(modify, "modify")
 
-  draws <- cholera_fit_select_iterations(cholera_fit_draws(fit), burnin = burnin, thin = thin)
+  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
   if (nrow(draws) < 1) stop("No posterior iterations remain after burn-in/thinning", call. = FALSE)
 
   set.seed(seed)
@@ -92,9 +92,9 @@ cholera_forecast_from_fit <- function(fit,
     if (length(common) > 0) p[common] <- as.list(as.numeric(theta[common]))
 
     if (!is.null(modify)) p <- utils::modifyList(p, modify)
-    cholera_parameters_validate(p)
+    chlaa_parameters_validate(p)
 
-    sim <- cholera_simulate(
+    sim <- chlaa_simulate(
       pars = p,
       time = time,
       n_particles = n_particles,
@@ -165,7 +165,7 @@ cholera_forecast_from_fit <- function(fit,
 
 #' Plot a forecast summary
 #'
-#' @param forecast Output from `cholera_forecast_from_fit()`.
+#' @param forecast Output from `chlaa_forecast_from_fit()`.
 #' @param var Variable to plot.
 #' @param data Optional observed data frame (must have a time column and a matching y column).
 #' @param data_time Column name for time in `data`.
@@ -174,7 +174,7 @@ cholera_forecast_from_fit <- function(fit,
 #'
 #' @return A ggplot object.
 #' @export
-cholera_plot_forecast <- function(forecast,
+chlaa_plot_forecast <- function(forecast,
                                   var,
                                   data = NULL,
                                   data_time = "time",
@@ -226,7 +226,7 @@ cholera_plot_forecast <- function(forecast,
 #'
 #' Convenience wrapper: builds a forecast over the observed data times including "cases" and overlays observations.
 #'
-#' @param fit A `cholera_fit` object.
+#' @param fit A `chlaa_fit` object.
 #' @param pars Baseline parameter list. If NULL uses `attr(fit, "start_pars")`.
 #' @param data Observed data. If NULL uses `attr(fit, "data")`.
 #' @param n_draws Number of posterior draws.
@@ -239,7 +239,7 @@ cholera_plot_forecast <- function(forecast,
 #'
 #' @return A ggplot object.
 #' @export
-cholera_plot_ppc <- function(fit,
+chlaa_plot_ppc <- function(fit,
                              pars = NULL,
                              data = NULL,
                              n_draws = 200,
@@ -250,14 +250,14 @@ cholera_plot_ppc <- function(fit,
                              n_particles = 1,
                              obs_model = c("nbinom", "mean")) {
   obs_model <- match.arg(obs_model)
-  fit <- cholera_as_fit(fit)
+  fit <- chlaa_as_fit(fit)
 
   if (is.null(data)) data <- attr(fit, "data", exact = TRUE)
   if (!is.data.frame(data) || !all(c("time", "cases") %in% names(data))) {
     stop("data must be a data.frame with columns time and cases", call. = FALSE)
   }
 
-  fc <- cholera_forecast_from_fit(
+  fc <- chlaa_forecast_from_fit(
     fit = fit,
     pars = pars,
     time = sort(unique(data$time)),
@@ -272,7 +272,7 @@ cholera_plot_ppc <- function(fit,
     n_particles = n_particles
   )
 
-  cholera_plot_forecast(
+  chlaa_plot_forecast(
     forecast = fc,
     var = "cases",
     data = data,

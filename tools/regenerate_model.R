@@ -88,8 +88,8 @@ if (isTRUE(run_smoke)) {
   code <- paste(
     sprintf(".libPaths(c(%s, .libPaths()))", dQuote(tmp_lib)),
     "library(chlaa)",
-    "pars <- cholera_parameters(validate = TRUE)",
-    "out <- cholera_simulate(pars, time = 0:1, n_particles = 1, dt = 1, seed = 1, which = 'simulate')",
+    "pars <- chlaa_parameters(validate = TRUE)",
+    "out <- chlaa_simulate(pars, time = 0:1, n_particles = 1, dt = 1, seed = 1, which = 'simulate')",
     "stopifnot(is.data.frame(out), nrow(out) > 0)",
     sep = "; "
   )

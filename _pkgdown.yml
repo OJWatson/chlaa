@@ -20,4 +20,4 @@ navbar:
 reference:
   - title: Reference
     contents:
-      - starts_with("cholera_")
+      - starts_with("chlaa_")

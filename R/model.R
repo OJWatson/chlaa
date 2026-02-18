@@ -33,9 +33,10 @@
 }
 
 # Internal: get a dust2 generator for either simulation or fitting
-cholera_generator <- function(which = c("simulate", "fit")) {
+chlaa_generator <- function(which = c("simulate", "fit")) {
   which <- match.arg(which)
 
+  # Keep these object names aligned with generated odin/dust symbols.
   obj <- if (which == "fit") "cholera_model_fit" else "cholera_model"
   ns <- asNamespace("chlaa")
 
@@ -76,7 +77,7 @@ cholera_generator <- function(which = c("simulate", "fit")) {
 
 #' Simulate the cholera model
 #'
-#' @param pars Parameter list, typically from `cholera_parameters()`.
+#' @param pars Parameter list, typically from `chlaa_parameters()`.
 #' @param time Vector of times to simulate at (days).
 #' @param n_particles Number of particles.
 #' @param dt Discrete time step (days).
@@ -88,7 +89,7 @@ cholera_generator <- function(which = c("simulate", "fit")) {
 #'
 #' @return A data.frame with columns `time`, `particle`, and model variables.
 #' @export
-cholera_simulate <- function(pars,
+chlaa_simulate <- function(pars,
                             time,
                             n_particles = 1,
                             dt = 0.25,
@@ -100,7 +101,7 @@ cholera_simulate <- function(pars,
   .check_named_list(pars, "pars")
   which <- match.arg(which)
 
-  gen <- cholera_generator(which = which)
+  gen <- chlaa_generator(which = which)
   pars_use <- pars[names(pars) %in% attr(gen, "parameters")$name]
   sys <- dust2::dust_system_create(
     generator = gen,

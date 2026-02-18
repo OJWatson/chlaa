@@ -8,19 +8,19 @@
 #' - cum_symptoms, cum_deaths (health outcomes)
 #'
 #' WASH intervention costs are optionally computed from the parameter windows if
-#' `scenario_runs` has the attribute `scenario_parameters` (added by `cholera_run_scenarios()`).
+#' `scenario_runs` has the attribute `scenario_parameters` (added by `chlaa_run_scenarios()`).
 #'
-#' @param scenario_runs Output of `cholera_run_scenarios()`.
+#' @param scenario_runs Output of `chlaa_run_scenarios()`.
 #' @param econ Optional named list overriding default economic parameters.
 #'
 #' @return A data.frame with scenario-level mean costs, DALYs, and components.
 #' @export
-cholera_health_econ <- function(scenario_runs, econ = NULL) {
+chlaa_health_econ <- function(scenario_runs, econ = NULL) {
   if (!requireNamespace("dplyr", quietly = TRUE)) {
-    stop("dplyr is required for cholera_health_econ()", call. = FALSE)
+    stop("dplyr is required for chlaa_health_econ()", call. = FALSE)
   }
 
-  econ <- cholera_econ_defaults(overrides = econ)
+  econ <- chlaa_econ_defaults(overrides = econ)
 
   req <- c(
     "scenario","time","particle",
@@ -99,9 +99,9 @@ cholera_health_econ <- function(scenario_runs, econ = NULL) {
     )
 }
 
-.cholera_particle_econ <- function(scenario_runs, econ = NULL) {
+.chlaa_particle_econ <- function(scenario_runs, econ = NULL) {
   .require_suggested("dplyr")
-  econ <- cholera_econ_defaults(overrides = econ)
+  econ <- chlaa_econ_defaults(overrides = econ)
 
   req <- c(
     "scenario","time","particle",
@@ -164,9 +164,9 @@ cholera_health_econ <- function(scenario_runs, econ = NULL) {
     dplyr::mutate(total_cost = .data$cost_vax + .data$cost_care + .data$cost_wash)
 }
 
-.cholera_particle_econ_delta <- function(scenario_runs, baseline, econ = NULL) {
+.chlaa_particle_econ_delta <- function(scenario_runs, baseline, econ = NULL) {
   .require_suggested("dplyr")
-  per_particle <- .cholera_particle_econ(scenario_runs, econ = econ)
+  per_particle <- .chlaa_particle_econ(scenario_runs, econ = econ)
   if (!baseline %in% per_particle$scenario) stop("baseline scenario not found", call. = FALSE)
 
   base <- per_particle[per_particle$scenario == baseline, , drop = FALSE] |>

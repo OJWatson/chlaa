@@ -1,8 +1,8 @@
 test_that("simulation preserves core state invariants", {
   skip_if_not_installed("dust2")
 
-  pars <- cholera_parameters()
-  sim <- cholera_simulate(pars, time = 0:20, n_particles = 3, dt = 1, seed = 1)
+  pars <- chlaa_parameters()
+  sim <- chlaa_simulate(pars, time = 0:20, n_particles = 3, dt = 1, seed = 1)
 
   compartments <- c("S", "E", "A", "M", "Sev", "Mu", "Mt", "Sevu", "Sevt", "Ra", "Rs", "V1", "V2", "Du", "Dt")
   expect_true(all(compartments %in% names(sim)))
@@ -18,8 +18,8 @@ test_that("simulation preserves core state invariants", {
 test_that("daily incidence and cumulative counters are consistent", {
   skip_if_not_installed("dust2")
 
-  pars <- cholera_parameters()
-  sim <- cholera_simulate(pars, time = 0:20, n_particles = 2, dt = 1, seed = 2)
+  pars <- chlaa_parameters()
+  sim <- chlaa_simulate(pars, time = 0:20, n_particles = 2, dt = 1, seed = 2)
 
   map <- c(
     inc_infections = "cum_infections",

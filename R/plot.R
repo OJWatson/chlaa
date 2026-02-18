@@ -2,13 +2,13 @@
 
 #' Plot trajectories of selected model variables
 #'
-#' @param sim Output from `cholera_simulate()` or `cholera_run_scenarios()`.
+#' @param sim Output from `chlaa_simulate()` or `chlaa_run_scenarios()`.
 #' @param vars Variables to plot.
 #' @param facet If TRUE, facet by variable.
 #'
 #' @return A ggplot object.
 #' @export
-cholera_plot_trajectories <- function(sim, vars = c("inc_symptoms", "cum_deaths"), facet = TRUE) {
+chlaa_plot_trajectories <- function(sim, vars = c("inc_symptoms", "cum_deaths"), facet = TRUE) {
   .require_suggested("ggplot2")
   .require_suggested("tidyr")
   .require_suggested("dplyr")
@@ -50,7 +50,7 @@ cholera_plot_trajectories <- function(sim, vars = c("inc_symptoms", "cum_deaths"
 #'
 #' @return A ggplot object.
 #' @export
-cholera_plot_incidence <- function(sim, var = "inc_symptoms") {
+chlaa_plot_incidence <- function(sim, var = "inc_symptoms") {
   .require_suggested("ggplot2")
   .require_suggested("dplyr")
 
@@ -80,12 +80,12 @@ cholera_plot_incidence <- function(sim, var = "inc_symptoms") {
 
 #' Plot scenario comparison bars for a chosen metric
 #'
-#' @param cmp Output from `cholera_compare_scenarios()`.
+#' @param cmp Output from `chlaa_compare_scenarios()`.
 #' @param metric Column in `cmp` to plot.
 #'
 #' @return A ggplot object.
 #' @export
-cholera_plot_scenarios <- function(cmp, metric = "deaths") {
+chlaa_plot_scenarios <- function(cmp, metric = "deaths") {
   .require_suggested("ggplot2")
   if (!is.data.frame(cmp) || !"scenario" %in% names(cmp) || !metric %in% names(cmp)) {
     stop("cmp must be a data.frame with columns scenario and ", metric, call. = FALSE)
@@ -100,12 +100,12 @@ cholera_plot_scenarios <- function(cmp, metric = "deaths") {
 
 #' Plot a cost-effectiveness plane from scenario comparisons
 #'
-#' Expects output from `cholera_compare_scenarios(..., include_econ = TRUE)`.
+#' Expects output from `chlaa_compare_scenarios(..., include_econ = TRUE)`.
 #'
 #' @param cmp Comparison table.
 #' @return A ggplot object.
 #' @export
-cholera_plot_ce_plane <- function(cmp) {
+chlaa_plot_ce_plane <- function(cmp) {
   .require_suggested("ggplot2")
   req <- c("scenario", "cost_diff", "dalys_averted")
   if (!all(req %in% names(cmp))) {

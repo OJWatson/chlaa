@@ -5,19 +5,19 @@
 #' @param name Scenario name.
 #' @param modify Named list of parameter modifications.
 #'
-#' @return An object of class `cholera_scenario`.
+#' @return An object of class `chlaa_scenario`.
 #' @export
-cholera_scenario <- function(name, modify) {
+chlaa_scenario <- function(name, modify) {
   if (!is.character(name) || length(name) != 1) stop("name must be a single string", call. = FALSE)
   if (!is.list(modify)) stop("modify must be a list", call. = FALSE)
   if (length(modify) > 0) .check_named_list(modify, "modify")
-  structure(list(name = name, modify = modify), class = "cholera_scenario")
+  structure(list(name = name, modify = modify), class = "chlaa_scenario")
 }
 
 #' Run multiple scenarios
 #'
 #' @param pars Baseline parameters.
-#' @param scenarios List of `cholera_scenario` objects.
+#' @param scenarios List of `chlaa_scenario` objects.
 #' @param time Simulation times.
 #' @param n_particles Particles per scenario.
 #' @param dt Time step.
@@ -26,27 +26,27 @@ cholera_scenario <- function(name, modify) {
 #' @return A data.frame of simulation outputs with a `scenario` column. The returned data frame
 #'   has an attribute `scenario_parameters`, a named list of the parameter lists used per scenario.
 #' @export
-cholera_run_scenarios <- function(pars,
+chlaa_run_scenarios <- function(pars,
                                  scenarios,
                                  time,
                                  n_particles = 200,
                                  dt = 0.25,
                                  seed = 1) {
   if (!is.list(scenarios) || length(scenarios) == 0) {
-    stop("scenarios must be a non-empty list of cholera_scenario objects", call. = FALSE)
+    stop("scenarios must be a non-empty list of chlaa_scenario objects", call. = FALSE)
   }
 
   pars_used <- list()
 
   out <- lapply(seq_along(scenarios), function(i) {
     sc <- scenarios[[i]]
-    if (!inherits(sc, "cholera_scenario")) stop("All scenarios must be cholera_scenario objects", call. = FALSE)
+    if (!inherits(sc, "chlaa_scenario")) stop("All scenarios must be chlaa_scenario objects", call. = FALSE)
 
     p <- utils::modifyList(pars, sc$modify)
-    cholera_parameters_validate(p)
+    chlaa_parameters_validate(p)
     pars_used[[sc$name]] <<- p
 
-    sim <- cholera_simulate(p, time = time, n_particles = n_particles, dt = dt, seed = seed + i)
+    sim <- chlaa_simulate(p, time = time, n_particles = n_particles, dt = dt, seed = seed + i)
     sim$scenario <- sc$name
     sim
   })
@@ -65,7 +65,7 @@ cholera_run_scenarios <- function(pars,
   res
 }
 
-.cholera_end_of_horizon <- function(scenario_runs) {
+.chlaa_end_of_horizon <- function(scenario_runs) {
   req <- c(
     "scenario","time","particle",
     "cum_infections","cum_symptoms","cum_deaths",
@@ -97,24 +97,24 @@ cholera_run_scenarios <- function(pars,
 #' Produces a scenario comparison table including infections, symptomatic cases, deaths, doses,
 #' treatment counts, and (optionally) costs and DALYs with ICERs vs baseline.
 #'
-#' @param scenario_runs Output from `cholera_run_scenarios()`.
+#' @param scenario_runs Output from `chlaa_run_scenarios()`.
 #' @param baseline Baseline scenario name.
-#' @param include_econ If TRUE, include health economic outputs (requires `cholera_health_econ()`).
-#' @param econ Optional named list of economic parameter overrides (passed to `cholera_health_econ()`).
+#' @param include_econ If TRUE, include health economic outputs (requires `chlaa_health_econ()`).
+#' @param econ Optional named list of economic parameter overrides (passed to `chlaa_health_econ()`).
 #' @param wtp Optional willingness-to-pay per DALY averted for NMB/INMB outputs.
 #'
 #' @return A data.frame of scenario-level means and deltas vs baseline.
 #' @export
-cholera_compare_scenarios <- function(scenario_runs,
+chlaa_compare_scenarios <- function(scenario_runs,
                                       baseline,
                                       include_econ = TRUE,
                                       econ = NULL,
                                       wtp = NULL) {
   if (!requireNamespace("dplyr", quietly = TRUE)) {
-    stop("dplyr is required for cholera_compare_scenarios()", call. = FALSE)
+    stop("dplyr is required for chlaa_compare_scenarios()", call. = FALSE)
   }
 
-  end <- .cholera_end_of_horizon(scenario_runs)
+  end <- .chlaa_end_of_horizon(scenario_runs)
 
   summ <- end |>
     dplyr::group_by(.data$scenario) |>
@@ -143,7 +143,7 @@ cholera_compare_scenarios <- function(scenario_runs,
 
   if (!isTRUE(include_econ)) return(summ)
 
-  he <- cholera_health_econ(scenario_runs, econ = econ)
+  he <- chlaa_health_econ(scenario_runs, econ = econ)
   out <- dplyr::left_join(summ, he, by = "scenario")
 
   base2 <- out[out$scenario == baseline, , drop = FALSE]

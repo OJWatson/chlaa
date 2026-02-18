@@ -1,11 +1,11 @@
 test_that("simulation runs with the bundled generator (fast smoke test)", {
   skip_if_not_installed("dust2")
 
-  pars <- cholera_parameters()
+  pars <- chlaa_parameters()
   time <- 0:2
   n_particles <- 2
 
-  sim <- cholera_simulate(pars, time = time, n_particles = n_particles, dt = 1, seed = 1)
+  sim <- chlaa_simulate(pars, time = time, n_particles = n_particles, dt = 1, seed = 1)
 
   expect_true(is.data.frame(sim))
   expect_equal(nrow(sim), length(time) * n_particles)

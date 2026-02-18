@@ -40,7 +40,7 @@ This document maps the cholera model structure used in this package to the imple
 
 ## Observation model (fit generator only)
 
-`inst/odin/cholera_model_fit.R` adds the likelihood layer used by `cholera_fit_pmcmc()`:
+`inst/odin/cholera_model_fit.R` adds the likelihood layer used by `chlaa_fit_pmcmc()`:
 
 - observed cases are linked to model incidence via `reporting_rate`
 - a negative binomial observation model uses `obs_size`

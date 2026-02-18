@@ -1,10 +1,10 @@
 test_that("parameter metadata matches generator parameter sets", {
   skip_if_not_installed("dust2")
 
-  info_names <- sort(unique(cholera_parameter_info()$name))
+  info_names <- sort(unique(chlaa_parameter_info()$name))
 
-  sim_gen <- chlaa:::cholera_generator("simulate")
-  fit_gen <- chlaa:::cholera_generator("fit")
+  sim_gen <- chlaa:::chlaa_generator("simulate")
+  fit_gen <- chlaa:::chlaa_generator("fit")
   gen_names <- sort(unique(c(
     attr(sim_gen, "parameters")$name,
     attr(fit_gen, "parameters")$name

@@ -1,6 +1,6 @@
 # Scenario forecasts from a fitted posterior
 
-.cholera_normalise_scenarios_input <- function(scenarios) {
+.chlaa_normalise_scenarios_input <- function(scenarios) {
   if (is.null(scenarios)) return(list())
 
   if (is.data.frame(scenarios)) {
@@ -9,34 +9,34 @@
     }
     out <- vector("list", nrow(scenarios))
     for (i in seq_len(nrow(scenarios))) {
-      out[[i]] <- cholera_scenario(scenarios$scenario[[i]], scenarios$modify[[i]])
+      out[[i]] <- chlaa_scenario(scenarios$scenario[[i]], scenarios$modify[[i]])
     }
     return(out)
   }
 
   if (is.list(scenarios) && length(scenarios) > 0) {
-    if (all(vapply(scenarios, function(x) inherits(x, "cholera_scenario"), logical(1)))) {
+    if (all(vapply(scenarios, function(x) inherits(x, "chlaa_scenario"), logical(1)))) {
       return(scenarios)
     }
 
     if (!is.null(names(scenarios)) && all(names(scenarios) != "")) {
-      out <- lapply(names(scenarios), function(nm) cholera_scenario(nm, scenarios[[nm]]))
+      out <- lapply(names(scenarios), function(nm) chlaa_scenario(nm, scenarios[[nm]]))
       return(out)
     }
   }
 
   stop(
-    "scenarios must be one of: (1) list of cholera_scenario, (2) named list of modify lists, ",
+    "scenarios must be one of: (1) list of chlaa_scenario, (2) named list of modify lists, ",
     "(3) data.frame with columns scenario and modify",
     call. = FALSE
   )
 }
 
-.cholera_quantile_colnames <- function(q) {
+.chlaa_quantile_colnames <- function(q) {
   paste0("q", gsub("\\.", "p", as.character(q)))
 }
 
-.cholera_simulate_posterior_matrix <- function(draws,
+.chlaa_simulate_posterior_matrix <- function(draws,
                                                idx,
                                                base_pars,
                                                modify = NULL,
@@ -70,9 +70,9 @@
     if (!is.null(modify)) {
       p <- utils::modifyList(p, modify)
     }
-    cholera_parameters_validate(p)
+    chlaa_parameters_validate(p)
 
-    sim <- cholera_simulate(
+    sim <- chlaa_simulate(
       pars = p,
       time = time,
       n_particles = n_particles,
@@ -111,8 +111,8 @@
   mats
 }
 
-.cholera_summarise_mats <- function(mats, time, scenario, type, quantiles) {
-  qcols <- .cholera_quantile_colnames(quantiles)
+.chlaa_summarise_mats <- function(mats, time, scenario, type, quantiles) {
+  qcols <- .chlaa_quantile_colnames(quantiles)
   out_list <- vector("list", length(mats))
 
   for (j in seq_along(mats)) {
@@ -146,9 +146,9 @@
 #' using the same draw indices and RNG seed streams, and returns both absolute forecasts and paired
 #' differences vs baseline.
 #'
-#' @param fit A `cholera_fit` object.
-#' @param pars Baseline parameter list. If NULL uses `attr(fit, "start_pars")` else `cholera_parameters()`.
-#' @param scenarios Scenarios to run (list of `cholera_scenario`, named list of modify lists, or a grid data.frame).
+#' @param fit A `chlaa_fit` object.
+#' @param pars Baseline parameter list. If NULL uses `attr(fit, "start_pars")` else `chlaa_parameters()`.
+#' @param scenarios Scenarios to run (list of `chlaa_scenario`, named list of modify lists, or a grid data.frame).
 #' @param baseline_name Baseline scenario name (modify list may be empty).
 #' @param time Simulation times. If NULL uses `fit` data times.
 #' @param vars Model variables to summarise.
@@ -167,7 +167,7 @@
 #'
 #' @return A tidy data.frame with columns: scenario, type, time, variable, mean, quantiles, n_samples.
 #' @export
-cholera_forecast_scenarios_from_fit <- function(fit,
+chlaa_forecast_scenarios_from_fit <- function(fit,
                                                 pars = NULL,
                                                 scenarios = NULL,
                                                 baseline_name = "baseline",
@@ -186,7 +186,7 @@ cholera_forecast_scenarios_from_fit <- function(fit,
                                                 deterministic = FALSE,
                                                 include_baseline_in_scenarios = TRUE) {
   obs_model <- match.arg(obs_model)
-  fit <- cholera_as_fit(fit)
+  fit <- chlaa_as_fit(fit)
 
   if (is.null(time)) {
     dat <- attr(fit, "data", exact = TRUE)
@@ -200,12 +200,12 @@ cholera_forecast_scenarios_from_fit <- function(fit,
 
   if (is.null(pars)) {
     pars <- attr(fit, "start_pars", exact = TRUE)
-    if (is.null(pars)) pars <- cholera_parameters()
+    if (is.null(pars)) pars <- chlaa_parameters()
   }
   .check_named_list(pars, "pars")
-  cholera_parameters_validate(pars)
+  chlaa_parameters_validate(pars)
 
-  draws <- cholera_fit_select_iterations(cholera_fit_draws(fit), burnin = burnin, thin = thin)
+  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
   if (nrow(draws) < 1) stop("No posterior iterations remain after burn-in/thinning", call. = FALSE)
 
   set.seed(seed)
@@ -214,11 +214,11 @@ cholera_forecast_scenarios_from_fit <- function(fit,
   vars_use <- vars
   if (isTRUE(include_cases)) vars_use <- unique(c(vars_use, "cases"))
 
-  sc_list <- .cholera_normalise_scenarios_input(scenarios)
+  sc_list <- .chlaa_normalise_scenarios_input(scenarios)
 
   has_baseline <- any(vapply(sc_list, function(s) identical(s$name, baseline_name), logical(1)))
   if (isTRUE(include_baseline_in_scenarios) && !has_baseline) {
-    sc_list <- c(list(cholera_scenario(baseline_name, list())), sc_list)
+    sc_list <- c(list(chlaa_scenario(baseline_name, list())), sc_list)
   }
 
   base_modify <- list()
@@ -230,7 +230,7 @@ cholera_forecast_scenarios_from_fit <- function(fit,
   }
   if (length(base_modify) > 0) .check_named_list(base_modify, "baseline modify")
 
-  mats_base <- .cholera_simulate_posterior_matrix(
+  mats_base <- .chlaa_simulate_posterior_matrix(
     draws = draws,
     idx = idx,
     base_pars = pars,
@@ -248,19 +248,19 @@ cholera_forecast_scenarios_from_fit <- function(fit,
 
   out <- list()
 
-  out[[length(out) + 1L]] <- .cholera_summarise_mats(
+  out[[length(out) + 1L]] <- .chlaa_summarise_mats(
     mats = mats_base, time = time, scenario = baseline_name, type = "absolute", quantiles = quantiles
   )
 
   mats0 <- lapply(mats_base, function(m) m - m)
-  out[[length(out) + 1L]] <- .cholera_summarise_mats(
+  out[[length(out) + 1L]] <- .chlaa_summarise_mats(
     mats = mats0, time = time, scenario = baseline_name, type = "difference", quantiles = quantiles
   )
 
   for (s in sc_list) {
     if (identical(s$name, baseline_name)) next
 
-    mats_s <- .cholera_simulate_posterior_matrix(
+    mats_s <- .chlaa_simulate_posterior_matrix(
       draws = draws,
       idx = idx,
       base_pars = pars,
@@ -276,13 +276,13 @@ cholera_forecast_scenarios_from_fit <- function(fit,
       deterministic = deterministic
     )
 
-    out[[length(out) + 1L]] <- .cholera_summarise_mats(
+    out[[length(out) + 1L]] <- .chlaa_summarise_mats(
       mats = mats_s, time = time, scenario = s$name, type = "absolute", quantiles = quantiles
     )
 
     mats_diff <- lapply(vars_use, function(v) mats_s[[v]] - mats_base[[v]])
     names(mats_diff) <- vars_use
-    out[[length(out) + 1L]] <- .cholera_summarise_mats(
+    out[[length(out) + 1L]] <- .chlaa_summarise_mats(
       mats = mats_diff, time = time, scenario = s$name, type = "difference", quantiles = quantiles
     )
   }

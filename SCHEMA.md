@@ -36,49 +36,49 @@ End users should not need odin2 installed: the repository commits the generated 
 
 ### `R/`
 - `parameters.R`
-  - `cholera_parameter_info()`: default values + metadata
-  - `cholera_parameters()`: build parameter list with overrides
-  - `cholera_parameters_validate()`: basic sanity checks
+  - `chlaa_parameter_info()`: default values + metadata
+  - `chlaa_parameters()`: build parameter list with overrides
+  - `chlaa_parameters_validate()`: basic sanity checks
 
 - `model.R`
-  - `cholera_simulate()`: run the model via dust2
-  - `cholera_generator()`: internal generator getter (packaged generator or runtime odin2 compile)
+  - `chlaa_simulate()`: run the model via dust2
+  - `chlaa_generator()`: internal generator getter (packaged generator or runtime odin2 compile)
 
 - `fit.R`
-  - `cholera_fit_pmcmc()`: particle MCMC fitting (monty + dust2)
+  - `chlaa_fit_pmcmc()`: particle MCMC fitting (monty + dust2)
 
 - `fit_object.R`
-  - `cholera_fit` S3 helpers (`print`, `summary`, `cholera_posterior_summary()`)
+  - `chlaa_fit` S3 helpers (`print`, `summary`, `chlaa_posterior_summary()`)
 
 - `posterior.R`
-  - draw extraction + parameter updating (`cholera_update_from_fit()`)
-  - posterior predictive simulations (`cholera_simulate_posterior()`)
+  - draw extraction + parameter updating (`chlaa_update_from_fit()`)
+  - posterior predictive simulations (`chlaa_simulate_posterior()`)
 
 - `scenario_builder.R`
-  - `cholera_trigger_time_from_sim()`
-  - `cholera_make_aa_scenarios()`: AA scenario templates
+  - `chlaa_trigger_time_from_sim()`
+  - `chlaa_make_aa_scenarios()`: AA scenario templates
 
 - `scenario.R`
-  - `cholera_scenario()`, `cholera_run_scenarios()`
-  - `cholera_compare_scenarios()` (optionally with economics)
+  - `chlaa_scenario()`, `chlaa_run_scenarios()`
+  - `chlaa_compare_scenarios()` (optionally with economics)
 
 - `counterfactual_grid.R`
-  - `cholera_counterfactual_grid()`: tidy grid of scenario knobs
-  - `cholera_run_counterfactual_grid()`
+  - `chlaa_counterfactual_grid()`: tidy grid of scenario knobs
+  - `chlaa_run_counterfactual_grid()`
 
 - `forecast.R`
-  - `cholera_forecast_from_fit()` and plotting helpers
-  - `cholera_plot_ppc()` for posterior predictive checks of cases
+  - `chlaa_forecast_from_fit()` and plotting helpers
+  - `chlaa_plot_ppc()` for posterior predictive checks of cases
 
 - `forecast_scenarios.R`, `plot_scenario_forecasts.R`
-  - `cholera_forecast_scenarios_from_fit()`: paired scenario forecasts + differences vs baseline
-  - `cholera_plot_scenario_forecasts()`: overlay or facet, absolute or differences
+  - `chlaa_forecast_scenarios_from_fit()`: paired scenario forecasts + differences vs baseline
+  - `chlaa_plot_scenario_forecasts()`: overlay or facet, absolute or differences
 
 - `health_econ.R`
-  - `cholera_health_econ()`: costs + DALYs using model accumulators
+  - `chlaa_health_econ()`: costs + DALYs using model accumulators
 
 - `optimise.R`
-  - `cholera_optimise_budget()`: constrained allocation optimiser (grid/continuous modes)
+  - `chlaa_optimise_budget()`: constrained allocation optimiser (grid/continuous modes)
 
 - `plot.R`
   - general plotting helpers and a CE plane plot
@@ -86,16 +86,16 @@ End users should not need odin2 installed: the repository commits the generated 
 ## Running the full stack
 
 Typical workflow:
-1. `pars <- cholera_parameters()`
-2. `sim <- cholera_simulate(pars, ...)`
-3. `fit <- cholera_fit_pmcmc(data, pars, ...)`
-4. `pars_cal <- cholera_update_from_fit(fit, pars)`
-5. `sc <- cholera_make_aa_scenarios(pars_cal, trigger_time = ...)`
-6. `runs <- cholera_run_scenarios(pars_cal, sc, time = ...)`
-7. `cmp <- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE)`
+1. `pars <- chlaa_parameters()`
+2. `sim <- chlaa_simulate(pars, ...)`
+3. `fit <- chlaa_fit_pmcmc(data, pars, ...)`
+4. `pars_cal <- chlaa_update_from_fit(fit, pars)`
+5. `sc <- chlaa_make_aa_scenarios(pars_cal, trigger_time = ...)`
+6. `runs <- chlaa_run_scenarios(pars_cal, sc, time = ...)`
+7. `cmp <- chlaa_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE)`
 8. Forecasts:
-   - `cholera_forecast_from_fit(fit, ...)`
-   - `cholera_forecast_scenarios_from_fit(fit, scenarios = sc, ...)`
+   - `chlaa_forecast_from_fit(fit, ...)`
+   - `chlaa_forecast_scenarios_from_fit(fit, scenarios = sc, ...)`
 
 ## Guardrails
 

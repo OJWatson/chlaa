@@ -13,12 +13,15 @@
 #' Load default economics parameters
 #'
 #' Reads default unit costs and DALY parameters from `inst/extdata/econ/`.
+#' These defaults are intended for demonstration and rapid scenario analysis;
+#' they should be replaced with context-specific values for real decisions.
 #'
 #' @param overrides Optional named list of values overriding defaults.
 #'
-#' @return A named list of economics parameters.
+#' @return A named list of economics parameters. Includes a `sources`
+#'   attribute containing source metadata (see `chlaa_econ_sources()`).
 #' @export
-cholera_econ_defaults <- function(overrides = NULL) {
+chlaa_econ_defaults <- function(overrides = NULL) {
   costs_file <- .chlaa_extdata_file(file.path("econ", "unit_costs.csv"))
   daly_file <- .chlaa_extdata_file(file.path("econ", "daly_params.csv"))
   if (!nzchar(costs_file) || !nzchar(daly_file)) {
@@ -39,25 +42,45 @@ cholera_econ_defaults <- function(overrides = NULL) {
     vals[names(overrides)] <- overrides
   }
 
+  src <- try(chlaa_econ_sources(), silent = TRUE)
+  if (!inherits(src, "try-error")) {
+    attr(vals, "sources") <- src
+  }
+
   vals
+}
+
+#' Load Economics Assumption Source Metadata
+#'
+#' Reads source notes and reference links for each economics default.
+#'
+#' @return A data.frame with one row per economics parameter and columns
+#'   including `name`, `source_type`, `citation`, and `source_url`.
+#' @export
+chlaa_econ_sources <- function() {
+  ref_file <- .chlaa_extdata_file(file.path("econ", "references.csv"))
+  if (!nzchar(ref_file)) {
+    stop("Could not find economics references file under inst/extdata/econ", call. = FALSE)
+  }
+  utils::read.csv(ref_file, stringsAsFactors = FALSE)
 }
 
 #' Cost-effectiveness acceptability table from scenario simulations
 #'
-#' @param scenario_runs Output from `cholera_run_scenarios()`.
+#' @param scenario_runs Output from `chlaa_run_scenarios()`.
 #' @param baseline Baseline scenario name.
 #' @param wtp Numeric vector of willingness-to-pay per DALY averted.
 #' @param econ Optional economics override list.
 #'
 #' @return A data.frame with CEAC probabilities by scenario and WTP.
 #' @export
-cholera_ceac <- function(scenario_runs,
+chlaa_ceac <- function(scenario_runs,
                          baseline = "baseline",
                          wtp = seq(0, 5000, by = 250),
                          econ = NULL) {
   .require_suggested("dplyr")
 
-  pair <- .cholera_particle_econ_delta(
+  pair <- .chlaa_particle_econ_delta(
     scenario_runs = scenario_runs,
     baseline = baseline,
     econ = econ

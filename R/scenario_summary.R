@@ -12,9 +12,9 @@
 #' @param wash_duration WASH intervention duration.
 #' @param care_duration Care intervention duration.
 #'
-#' @return A list of `cholera_scenario` objects.
+#' @return A list of `chlaa_scenario` objects.
 #' @export
-cholera_standard_scenarios <- function(pars,
+chlaa_standard_scenarios <- function(pars,
                                        trigger_time,
                                        horizon,
                                        vax_total_doses = 280000,
@@ -30,10 +30,10 @@ cholera_standard_scenarios <- function(pars,
   }
 
   sc <- list(
-    cholera_scenario("baseline", list())
+    chlaa_scenario("baseline", list())
   )
 
-  no_vax <- cholera_make_aa_scenarios(
+  no_vax <- chlaa_make_aa_scenarios(
     pars = pars,
     trigger_time = trigger_time,
     horizon = horizon,
@@ -49,7 +49,7 @@ cholera_standard_scenarios <- function(pars,
     sc <- c(sc, no_vax)
   }
 
-  plan_early <- .cholera_make_vax_plan(
+  plan_early <- .chlaa_make_vax_plan(
     N = pars$N,
     trigger_time = trigger_time,
     total_doses = vax_total_doses,
@@ -58,7 +58,7 @@ cholera_standard_scenarios <- function(pars,
     campaign_days = campaign_days,
     horizon = horizon
   )
-  plan_late <- .cholera_make_vax_plan(
+  plan_late <- .chlaa_make_vax_plan(
     N = pars$N,
     trigger_time = trigger_time,
     total_doses = vax_total_doses,
@@ -68,8 +68,8 @@ cholera_standard_scenarios <- function(pars,
     horizon = horizon
   )
 
-  w_wash <- .cholera_window(trigger_time, wash_duration, horizon = horizon)
-  w_care <- .cholera_window(trigger_time, care_duration, horizon = horizon)
+  w_wash <- .chlaa_window(trigger_time, wash_duration, horizon = horizon)
+  w_care <- .chlaa_window(trigger_time, care_duration, horizon = horizon)
 
   wash_mod <- list(
     chlor_start = w_wash$start, chlor_end = w_wash$end, chlor_effect = 0.2,
@@ -98,11 +98,11 @@ cholera_standard_scenarios <- function(pars,
   sc <- c(
     sc,
     list(
-      cholera_scenario("early_vaccination", early_mod),
-      cholera_scenario("late_vaccination", late_mod),
-      cholera_scenario("wash_only", wash_mod),
-      cholera_scenario("cm_only", care_mod),
-      cholera_scenario("combined_package", combined_mod)
+      chlaa_scenario("early_vaccination", early_mod),
+      chlaa_scenario("late_vaccination", late_mod),
+      chlaa_scenario("wash_only", wash_mod),
+      chlaa_scenario("cm_only", care_mod),
+      chlaa_scenario("combined_package", combined_mod)
     )
   )
 
@@ -111,14 +111,14 @@ cholera_standard_scenarios <- function(pars,
 
 #' Summarise scenario outcomes with uncertainty and baseline deltas
 #'
-#' @param scenario_runs Output from `cholera_run_scenarios()`.
+#' @param scenario_runs Output from `chlaa_run_scenarios()`.
 #' @param baseline Baseline scenario name.
 #' @param incidence_var Incidence variable used for peak and control metrics.
 #' @param control_threshold Threshold used for time-to-control metrics.
 #'
 #' @return A data.frame with scenario summaries.
 #' @export
-cholera_scenario_summary <- function(scenario_runs,
+chlaa_scenario_summary <- function(scenario_runs,
                                      baseline = "baseline",
                                      incidence_var = "inc_symptoms",
                                      control_threshold = 1) {
@@ -190,7 +190,7 @@ cholera_scenario_summary <- function(scenario_runs,
 
 #' Produce a compact scenario analysis report object
 #'
-#' @param scenario_runs Output from `cholera_run_scenarios()`.
+#' @param scenario_runs Output from `chlaa_run_scenarios()`.
 #' @param baseline Baseline scenario name.
 #' @param include_econ Include economic comparison table.
 #' @param econ Economic parameter overrides passed to economics functions.
@@ -198,13 +198,13 @@ cholera_scenario_summary <- function(scenario_runs,
 #'
 #' @return A list with summary table and key plots.
 #' @export
-cholera_scenario_report <- function(scenario_runs,
+chlaa_scenario_report <- function(scenario_runs,
                                     baseline = "baseline",
                                     include_econ = TRUE,
                                     econ = NULL,
                                     wtp = NULL) {
-  summary_tbl <- cholera_scenario_summary(scenario_runs, baseline = baseline)
-  cmp <- cholera_compare_scenarios(
+  summary_tbl <- chlaa_scenario_summary(scenario_runs, baseline = baseline)
+  cmp <- chlaa_compare_scenarios(
     scenario_runs = scenario_runs,
     baseline = baseline,
     include_econ = include_econ,
@@ -213,13 +213,13 @@ cholera_scenario_report <- function(scenario_runs,
   )
 
   plots <- list(
-    incidence = cholera_plot_incidence(scenario_runs, var = "inc_symptoms"),
-    cumulative_deaths = cholera_plot_incidence(scenario_runs, var = "cum_deaths"),
-    scenario_comparison = cholera_plot_scenarios(cmp, metric = "deaths")
+    incidence = chlaa_plot_incidence(scenario_runs, var = "inc_symptoms"),
+    cumulative_deaths = chlaa_plot_incidence(scenario_runs, var = "cum_deaths"),
+    scenario_comparison = chlaa_plot_scenarios(cmp, metric = "deaths")
   )
 
   if (isTRUE(include_econ)) {
-    plots$ce_plane <- cholera_plot_ce_plane(cmp)
+    plots$ce_plane <- chlaa_plot_ce_plane(cmp)
   }
 
   list(

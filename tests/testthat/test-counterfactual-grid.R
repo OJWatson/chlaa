@@ -1,5 +1,5 @@
 test_that("counterfactual grid returns scenarios and modify lists", {
-  grid <- cholera_counterfactual_grid(
+  grid <- chlaa_counterfactual_grid(
     trigger_time = 30,
     horizon = 366,
     aa_start_offset = c(0, -14),
@@ -12,7 +12,7 @@ test_that("counterfactual grid returns scenarios and modify lists", {
   expect_true(all(c("scenario", "modify") %in% names(grid)))
   expect_true(length(grid$modify) == nrow(grid))
 
-  sc <- cholera_scenarios_from_grid(grid)
+  sc <- chlaa_scenarios_from_grid(grid)
   expect_true(is.list(sc))
-  expect_true(all(vapply(sc, function(x) inherits(x, "cholera_scenario"), logical(1))))
+  expect_true(all(vapply(sc, function(x) inherits(x, "chlaa_scenario"), logical(1))))
 })

@@ -4,14 +4,14 @@
 #'
 #' Finds the first time where an aggregated incidence stream reaches or exceeds a threshold.
 #'
-#' @param sim Output of `cholera_simulate()` (or a single-scenario subset of `cholera_run_scenarios()`).
+#' @param sim Output of `chlaa_simulate()` (or a single-scenario subset of `chlaa_run_scenarios()`).
 #' @param threshold Numeric threshold.
 #' @param var Variable name in `sim` to threshold on. Defaults to `inc_symptoms`.
 #' @param fun Aggregation function across particles at each time (defaults to `mean`).
 #'
 #' @return A single numeric trigger time (same units as `sim$time`), or `NA_real_` if never reached.
 #' @export
-cholera_trigger_time_from_sim <- function(sim, threshold, var = "inc_symptoms", fun = mean) {
+chlaa_trigger_time_from_sim <- function(sim, threshold, var = "inc_symptoms", fun = mean) {
   if (!is.data.frame(sim)) stop("sim must be a data.frame", call. = FALSE)
   if (!all(c("time", "particle", var) %in% names(sim))) {
     stop("sim must contain columns: time, particle, ", var, call. = FALSE)
@@ -25,7 +25,7 @@ cholera_trigger_time_from_sim <- function(sim, threshold, var = "inc_symptoms", 
   min(tt[idx], na.rm = TRUE)
 }
 
-.cholera_window <- function(start, duration, horizon = NULL) {
+.chlaa_window <- function(start, duration, horizon = NULL) {
   if (is.null(horizon)) {
     return(list(start = start, end = start + duration))
   }
@@ -39,7 +39,7 @@ cholera_trigger_time_from_sim <- function(sim, threshold, var = "inc_symptoms", 
   stop("Invalid regimen: ", regimen, " (use 1/2 or '1dose'/'2dose')", call. = FALSE)
 }
 
-.cholera_make_vax_plan <- function(N,
+.chlaa_make_vax_plan <- function(N,
                                   trigger_time,
                                   total_doses,
                                   regimen = c("1dose", "2dose"),
@@ -115,9 +115,9 @@ cholera_trigger_time_from_sim <- function(sim, threshold, var = "inc_symptoms", 
 #' @param vax_immunity_1,vax_immunity_2 Vaccine immunity durations in days.
 #' @param baseline_name Name for baseline scenario.
 #'
-#' @return A list of `cholera_scenario` objects.
+#' @return A list of `chlaa_scenario` objects.
 #' @export
-cholera_make_aa_scenarios <- function(pars,
+chlaa_make_aa_scenarios <- function(pars,
                                       trigger_time = NULL,
                                       baseline_sim = NULL,
                                       trigger_threshold = NULL,
@@ -147,15 +147,15 @@ cholera_make_aa_scenarios <- function(pars,
     if (is.null(baseline_sim) || is.null(trigger_threshold)) {
       stop("If trigger_time is NULL you must provide baseline_sim and trigger_threshold", call. = FALSE)
     }
-    trigger_time <- cholera_trigger_time_from_sim(baseline_sim, threshold = trigger_threshold)
+    trigger_time <- chlaa_trigger_time_from_sim(baseline_sim, threshold = trigger_threshold)
     if (is.na(trigger_time)) stop("Trigger threshold was never reached in baseline_sim", call. = FALSE)
   }
 
-  scenarios <- list(cholera_scenario(baseline_name, list()))
+  scenarios <- list(chlaa_scenario(baseline_name, list()))
 
   if (isTRUE(include_no_intervention)) {
     scenarios <- c(scenarios, list(
-      cholera_scenario("no_intervention", list(
+      chlaa_scenario("no_intervention", list(
         chlor_start = 0, chlor_end = 0, chlor_effect = 0,
         hyg_start = 0, hyg_end = 0, hyg_effect = 0,
         lat_start = 0, lat_end = 0, lat_effect = 0,
@@ -170,8 +170,8 @@ cholera_make_aa_scenarios <- function(pars,
     ))
   }
 
-  w_wash <- .cholera_window(trigger_time, wash_duration, horizon = horizon)
-  w_care <- .cholera_window(trigger_time, care_duration, horizon = horizon)
+  w_wash <- .chlaa_window(trigger_time, wash_duration, horizon = horizon)
+  w_care <- .chlaa_window(trigger_time, care_duration, horizon = horizon)
 
   orc_cap_use <- if (is.null(orc_capacity)) pars$orc_capacity else orc_capacity
   ctc_cap_use <- if (is.null(ctc_capacity)) pars$ctc_capacity else ctc_capacity
@@ -192,7 +192,7 @@ cholera_make_aa_scenarios <- function(pars,
 
   if (isTRUE(include_aa_no_vax)) {
     scenarios <- c(scenarios, list(
-      cholera_scenario("aa_no_vax", c(
+      chlaa_scenario("aa_no_vax", c(
         aa_common,
         list(
           vax1_start = 0, vax1_end = 0, vax1_doses_per_day = 0, vax1_total_doses = 0,
@@ -207,13 +207,13 @@ cholera_make_aa_scenarios <- function(pars,
   if (vax_total_doses > 0) {
     N <- pars$N
 
-    plan1 <- .cholera_make_vax_plan(
+    plan1 <- .chlaa_make_vax_plan(
       N = N, trigger_time = trigger_time, total_doses = vax_total_doses,
       regimen = "1dose", delay = vax_delay, campaign_days = vax_campaign_days,
       dose_interval = vax_dose_interval, horizon = horizon
     )
     scenarios <- c(scenarios, list(
-      cholera_scenario("aa_vax_1dose", c(
+      chlaa_scenario("aa_vax_1dose", c(
         aa_common,
         plan1,
         list(ve_1 = ve1_use, ve_2 = ve2_use,
@@ -221,13 +221,13 @@ cholera_make_aa_scenarios <- function(pars,
       ))
     ))
 
-    plan2 <- .cholera_make_vax_plan(
+    plan2 <- .chlaa_make_vax_plan(
       N = N, trigger_time = trigger_time, total_doses = vax_total_doses,
       regimen = "2dose", delay = vax_delay, campaign_days = vax_campaign_days,
       dose_interval = vax_dose_interval, horizon = horizon
     )
     scenarios <- c(scenarios, list(
-      cholera_scenario("aa_vax_2dose", c(
+      chlaa_scenario("aa_vax_2dose", c(
         aa_common,
         plan2,
         list(ve_1 = ve1_use, ve_2 = ve2_use,

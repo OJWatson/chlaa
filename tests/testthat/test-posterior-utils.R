@@ -1,5 +1,5 @@
-test_that("cholera_update_from_fit updates known parameters", {
-  pars <- cholera_parameters()
+test_that("chlaa_update_from_fit updates known parameters", {
+  pars <- chlaa_parameters()
 
   fake_draws <- matrix(
     c(
@@ -11,9 +11,9 @@ test_that("cholera_update_from_fit updates known parameters", {
   colnames(fake_draws) <- c("trans_prob", "contact_rate", "incubation_time")
 
   fit <- list(pars = fake_draws)
-  class(fit) <- "cholera_fit"
+  class(fit) <- "chlaa_fit"
 
-  upd <- cholera_update_from_fit(fit, pars, draw = "mean", burnin = 0, thin = 1, validate = TRUE)
+  upd <- chlaa_update_from_fit(fit, pars, draw = "mean", burnin = 0, thin = 1, validate = TRUE)
 
   expect_true(is.list(upd))
   expect_equal(upd$trans_prob, mean(c(0.06, 0.05)))
