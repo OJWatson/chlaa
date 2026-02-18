@@ -63,93 +63,193 @@
 
     
     
-<p>This vignette shows how to construct and compare intervention
-scenarios.</p>
+<div class="section level2">
+<h2 id="why-this-workflow">Why This Workflow?<a class="anchor" aria-label="anchor" href="#why-this-workflow"></a>
+</h2>
+<p>This vignette shows how to move from a baseline simulation to
+operational scenarios, with emphasis on clear comparisons:</p>
+<ol style="list-style-type: decimal">
+<li>Trigger detection.</li>
+<li>Snapshot branching (counterfactuals from a shared epidemic
+state).</li>
+<li>Overlay plots and baseline-difference plots.</li>
+<li>Compact scenario summary tables.</li>
+</ol>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/OJWatson/chlaa" class="external-link">chlaa</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="baseline-preview-and-trigger-time">1) Baseline Preview And Trigger Time<a class="anchor" aria-label="anchor" href="#baseline-preview-and-trigger-time"></a>
+</h2>
+<p>We use a simple threshold trigger (<code>15</code> daily cases) as an
+example operational rule.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_parameters.html">cholera_parameters</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fl">0</span><span class="op">:</span><span class="fl">60</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">pars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_parameters.html">chlaa_parameters</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">time_preview</span> <span class="op">&lt;-</span> <span class="fl">0</span><span class="op">:</span><span class="fl">260</span></span>
+<span></span>
+<span><span class="va">baseline_preview</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_simulate.html">chlaa_simulate</a></span><span class="op">(</span></span>
+<span>  <span class="va">pars</span>,</span>
+<span>  time <span class="op">=</span> <span class="va">time_preview</span>,</span>
+<span>  n_particles <span class="op">=</span> <span class="fl">40</span>,</span>
+<span>  dt <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">trigger_time</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_trigger_time_from_sim.html">chlaa_trigger_time_from_sim</a></span><span class="op">(</span></span>
+<span>  <span class="va">baseline_preview</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fl">15</span>,</span>
+<span>  var <span class="op">=</span> <span class="st">"inc_symptoms"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">trigger_time</span></span>
+<span><span class="co">#&gt; [1] 10</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="build-standard-scenario-set">2) Build Standard Scenario Set<a class="anchor" aria-label="anchor" href="#build-standard-scenario-set"></a>
+</h2>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Standard operational templates</span></span>
-<span><span class="va">scenarios</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_standard_scenarios.html">cholera_standard_scenarios</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">scenarios</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_standard_scenarios.html">chlaa_standard_scenarios</a></span><span class="op">(</span></span>
 <span>  pars <span class="op">=</span> <span class="va">pars</span>,</span>
-<span>  trigger_time <span class="op">=</span> <span class="fl">14</span>,</span>
-<span>  horizon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">time</span><span class="op">)</span>,</span>
+<span>  trigger_time <span class="op">=</span> <span class="va">trigger_time</span>,</span>
+<span>  horizon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">time_preview</span><span class="op">)</span>,</span>
 <span>  vax_total_doses <span class="op">=</span> <span class="fl">60000</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">scenarios</span>, <span class="va">`[[`</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, <span class="st">"name"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "baseline"          "no_vaccination"    "early_vaccination"</span></span>
 <span><span class="co">#&gt; [4] "late_vaccination"  "wash_only"         "cm_only"          </span></span>
 <span><span class="co">#&gt; [7] "combined_package"</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="branch-counterfactuals-from-a-shared-snapshot">3) Branch Counterfactuals From A Shared Snapshot<a class="anchor" aria-label="anchor" href="#branch-counterfactuals-from-a-shared-snapshot"></a>
+</h2>
+<p>Snapshot branching keeps pre-trigger epidemic history identical
+across scenarios, which improves interpretability of differences after
+the intervention start.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Simulate</span></span>
-<span><span class="va">runs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_run_scenarios.html">cholera_run_scenarios</a></span><span class="op">(</span><span class="va">pars</span>, <span class="va">scenarios</span>, time <span class="op">=</span> <span class="va">time</span>, n_particles <span class="op">=</span> <span class="fl">25</span>, dt <span class="op">=</span> <span class="fl">1</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">snap</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_snapshot_create.html">chlaa_snapshot_create</a></span><span class="op">(</span></span>
+<span>  pars <span class="op">=</span> <span class="va">pars</span>,</span>
+<span>  snapshot_time <span class="op">=</span> <span class="va">trigger_time</span>,</span>
+<span>  n_particles <span class="op">=</span> <span class="fl">40</span>,</span>
+<span>  dt <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">post_time</span> <span class="op">&lt;-</span> <span class="va">trigger_time</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">time_preview</span><span class="op">)</span></span>
+<span><span class="va">runs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_run_scenarios_from_snapshot.html">chlaa_run_scenarios_from_snapshot</a></span><span class="op">(</span></span>
+<span>  snapshot <span class="op">=</span> <span class="va">snap</span>,</span>
+<span>  pars <span class="op">=</span> <span class="va">pars</span>,</span>
+<span>  scenarios <span class="op">=</span> <span class="va">scenarios</span>,</span>
+<span>  time <span class="op">=</span> <span class="va">post_time</span></span>
+<span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">runs</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   scenario time particle      S E A M Sev Mu Mt Sevu Sevt Ra Rs V1 V2 Du Dt C</span></span>
-<span><span class="co">#&gt; 1 baseline    0        1 539998 0 0 0   2  0  0    0    0  0  0  0  0  0  0 0</span></span>
-<span><span class="co">#&gt; 2 baseline    0        2 539998 0 0 0   2  0  0    0    0  0  0  0  0  0  0 0</span></span>
-<span><span class="co">#&gt; 3 baseline    0        3 539998 0 0 0   2  0  0    0    0  0  0  0  0  0  0 0</span></span>
-<span><span class="co">#&gt; 4 baseline    0        4 539998 0 0 0   2  0  0    0    0  0  0  0  0  0  0 0</span></span>
-<span><span class="co">#&gt; 5 baseline    0        5 539998 0 0 0   2  0  0    0    0  0  0  0  0  0  0 0</span></span>
-<span><span class="co">#&gt; 6 baseline    0        6 539998 0 0 0   2  0  0    0    0  0  0  0  0  0  0 0</span></span>
-<span><span class="co">#&gt;   inc_infections inc_symptoms inc_deaths inc_vax1 inc_vax2 cum_infections</span></span>
-<span><span class="co">#&gt; 1              0            0          0        0        0              0</span></span>
-<span><span class="co">#&gt; 2              0            0          0        0        0              0</span></span>
-<span><span class="co">#&gt; 3              0            0          0        0        0              0</span></span>
-<span><span class="co">#&gt; 4              0            0          0        0        0              0</span></span>
-<span><span class="co">#&gt; 5              0            0          0        0        0              0</span></span>
-<span><span class="co">#&gt; 6              0            0          0        0        0              0</span></span>
-<span><span class="co">#&gt;   cum_symptoms cum_deaths cum_vax1 cum_vax2 cum_orc_treated cum_ctc_treated</span></span>
-<span><span class="co">#&gt; 1            0          0        0        0               0               0</span></span>
-<span><span class="co">#&gt; 2            0          0        0        0               0               0</span></span>
-<span><span class="co">#&gt; 3            0          0        0        0               0               0</span></span>
-<span><span class="co">#&gt; 4            0          0        0        0               0               0</span></span>
-<span><span class="co">#&gt; 5            0          0        0        0               0               0</span></span>
-<span><span class="co">#&gt; 6            0          0        0        0               0               0</span></span></code></pre></div>
+<span><span class="co">#&gt;   scenario time particle      S   E   A  M Sev Mu Mt Sevu Sevt Ra Rs V1 V2 Du</span></span>
+<span><span class="co">#&gt; 1 baseline   10        1 539080 686 141 16   8 15  0    9    0 38  5  0  0  2</span></span>
+<span><span class="co">#&gt; 2 baseline   10        2 539096 674 128 21   5 30  0    6    0 37  2  0  0  1</span></span>
+<span><span class="co">#&gt; 3 baseline   10        3 539224 543 130 22   6 17  0    8    0 45  5  0  0  0</span></span>
+<span><span class="co">#&gt; 4 baseline   10        4 539057 691 138 28  10 22  0   10    0 36  6  0  0  2</span></span>
+<span><span class="co">#&gt; 5 baseline   10        5 539066 677 147 24   1 24  0   16    0 42  2  0  0  1</span></span>
+<span><span class="co">#&gt; 6 baseline   10        6 538859 845 180 22  15 19  0   19    0 35  4  0  0  2</span></span>
+<span><span class="co">#&gt;   Dt           C inc_infections inc_symptoms inc_deaths inc_vax1 inc_vax2</span></span>
+<span><span class="co">#&gt; 1  0 0.009695160            323           21          0        0        0</span></span>
+<span><span class="co">#&gt; 2  0 0.010350478            309           16          0        0        0</span></span>
+<span><span class="co">#&gt; 3  0 0.009002428            238           20          0        0        0</span></span>
+<span><span class="co">#&gt; 4  0 0.011948869            318           29          1        0        0</span></span>
+<span><span class="co">#&gt; 5  0 0.012605655            336           17          0        0        0</span></span>
+<span><span class="co">#&gt; 6  0 0.014912023            370           31          0        0        0</span></span>
+<span><span class="co">#&gt;   cum_infections cum_symptoms cum_deaths cum_vax1 cum_vax2 cum_orc_treated</span></span>
+<span><span class="co">#&gt; 1            919           54          2        0        0               0</span></span>
+<span><span class="co">#&gt; 2            902           63          1        0        0               0</span></span>
+<span><span class="co">#&gt; 3            775           56          0        0        0               0</span></span>
+<span><span class="co">#&gt; 4            941           76          2        0        0               0</span></span>
+<span><span class="co">#&gt; 5            932           66          1        0        0               0</span></span>
+<span><span class="co">#&gt; 6           1141           79          2        0        0               0</span></span>
+<span><span class="co">#&gt;   cum_ctc_treated</span></span>
+<span><span class="co">#&gt; 1               0</span></span>
+<span><span class="co">#&gt; 2               0</span></span>
+<span><span class="co">#&gt; 3               0</span></span>
+<span><span class="co">#&gt; 4               0</span></span>
+<span><span class="co">#&gt; 5               0</span></span>
+<span><span class="co">#&gt; 6               0</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="compare-scenario-trajectories">4) Compare Scenario Trajectories<a class="anchor" aria-label="anchor" href="#compare-scenario-trajectories"></a>
+</h2>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Summaries and comparisons</span></span>
-<span><span class="va">summary_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_scenario_summary.html">cholera_scenario_summary</a></span><span class="op">(</span><span class="va">runs</span>, baseline <span class="op">=</span> <span class="st">"baseline"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_scenario_overlay.html">chlaa_plot_scenario_overlay</a></span><span class="op">(</span><span class="va">runs</span>, var <span class="op">=</span> <span class="st">"inc_symptoms"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="scenario_workflow_files/figure-html/unnamed-chunk-6-1.png" class="r-plt" alt="" width="700"></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_difference_vs_baseline.html">chlaa_plot_difference_vs_baseline</a></span><span class="op">(</span></span>
+<span>  <span class="va">runs</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="st">"baseline"</span>,</span>
+<span>  var <span class="op">=</span> <span class="st">"inc_symptoms"</span>,</span>
+<span>  cumulative <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="scenario_workflow_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="" width="700"></p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_difference_vs_baseline.html">chlaa_plot_difference_vs_baseline</a></span><span class="op">(</span></span>
+<span>  <span class="va">runs</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="st">"baseline"</span>,</span>
+<span>  var <span class="op">=</span> <span class="st">"inc_symptoms"</span>,</span>
+<span>  cumulative <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="scenario_workflow_files/figure-html/unnamed-chunk-8-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="summaries-for-decision-support">5) Summaries For Decision Support<a class="anchor" aria-label="anchor" href="#summaries-for-decision-support"></a>
+</h2>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">summary_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_scenario_summary.html">chlaa_scenario_summary</a></span><span class="op">(</span><span class="va">runs</span>, baseline <span class="op">=</span> <span class="st">"baseline"</span><span class="op">)</span></span>
 <span><span class="va">summary_tbl</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 7 × 8</span></span></span>
 <span><span class="co">#&gt;   scenario  total_cases total_deaths cases_averted deaths_averted peak_incidence</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> baseline      <span style="text-decoration: underline;">138</span>676.       <span style="text-decoration: underline;">15</span>569.           0               0           <span style="text-decoration: underline;">7</span>311.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> cm_only       <span style="text-decoration: underline;">138</span>638.       <span style="text-decoration: underline;">14</span>044.          38.2          <span style="text-decoration: underline;">1</span>525.          <span style="text-decoration: underline;">7</span>280.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> combined…     <span style="text-decoration: underline;">137</span>803.       <span style="text-decoration: underline;">13</span>806          873.           <span style="text-decoration: underline;">1</span>763.          <span style="text-decoration: underline;">7</span>000.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> early_va…     <span style="text-decoration: underline;">137</span>740.       <span style="text-decoration: underline;">13</span>767.         936.           <span style="text-decoration: underline;">1</span>802           <span style="text-decoration: underline;">7</span>032.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> late_vac…     <span style="text-decoration: underline;">137</span>630.       <span style="text-decoration: underline;">13</span>919.        <span style="text-decoration: underline;">1</span>046.           <span style="text-decoration: underline;">1</span>650.          <span style="text-decoration: underline;">7</span>137.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> no_vacci…     <span style="text-decoration: underline;">116</span>470.        <span style="text-decoration: underline;">9</span>152.       <span style="text-decoration: underline;">22</span>205.           <span style="text-decoration: underline;">6</span>417.          <span style="text-decoration: underline;">4</span>437.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> wash_only     <span style="text-decoration: underline;">117</span>686.       <span style="text-decoration: underline;">10</span>789.       <span style="text-decoration: underline;">20</span>990.           <span style="text-decoration: underline;">4</span>780.          <span style="text-decoration: underline;">4</span>478.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> baseline      <span style="text-decoration: underline;">232</span>004.       <span style="text-decoration: underline;">33</span>710.           0               0           <span style="text-decoration: underline;">7</span>310.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> cm_only       <span style="text-decoration: underline;">231</span>918.       <span style="text-decoration: underline;">28</span>301.          86.6          <span style="text-decoration: underline;">5</span>409.          <span style="text-decoration: underline;">7</span>253.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> combined…     <span style="text-decoration: underline;">231</span>918.       <span style="text-decoration: underline;">28</span>301.          86.6          <span style="text-decoration: underline;">5</span>409.          <span style="text-decoration: underline;">7</span>253.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> early_va…     <span style="text-decoration: underline;">231</span>918.       <span style="text-decoration: underline;">28</span>301.          86.6          <span style="text-decoration: underline;">5</span>409.          <span style="text-decoration: underline;">7</span>253.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> late_vac…     <span style="text-decoration: underline;">231</span>701.       <span style="text-decoration: underline;">28</span>232.         304.           <span style="text-decoration: underline;">5</span>478.          <span style="text-decoration: underline;">6</span>948.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> no_vacci…     <span style="text-decoration: underline;">224</span>871.       <span style="text-decoration: underline;">27</span>348.        <span style="text-decoration: underline;">7</span>133.           <span style="text-decoration: underline;">6</span>362.          <span style="text-decoration: underline;">4</span>433.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> wash_only     <span style="text-decoration: underline;">225</span>212.       <span style="text-decoration: underline;">32</span>685.        <span style="text-decoration: underline;">6</span>792.           <span style="text-decoration: underline;">1</span>026.          <span style="text-decoration: underline;">4</span>478.</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 2 more variables: time_peak &lt;dbl&gt;, time_to_control &lt;dbl&gt;</span></span></span></code></pre></div>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_compare_scenarios.html">cholera_compare_scenarios</a></span><span class="op">(</span><span class="va">runs</span>, baseline <span class="op">=</span> <span class="st">"baseline"</span>, include_econ <span class="op">=</span> <span class="cn">TRUE</span>, wtp <span class="op">=</span> <span class="fl">1500</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_compare_scenarios.html">chlaa_compare_scenarios</a></span><span class="op">(</span></span>
+<span>  <span class="va">runs</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="st">"baseline"</span>,</span>
+<span>  include_econ <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  wtp <span class="op">=</span> <span class="fl">1500</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">cmp</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 7 × 21</span></span></span>
 <span><span class="co">#&gt;   scenario     infections cases_symptomatic deaths doses orc_treated ctc_treated</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> baseline        <span style="text-decoration: underline;">566</span>194.           <span style="text-decoration: underline;">138</span>676. <span style="text-decoration: underline;">15</span>569.     0          0           0 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> cm_only         <span style="text-decoration: underline;">565</span>733.           <span style="text-decoration: underline;">138</span>638. <span style="text-decoration: underline;">14</span>044.     0      <span style="text-decoration: underline;">16</span>004.       <span style="text-decoration: underline;">4</span>274.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> combined_pa…    <span style="text-decoration: underline;">563</span>674.           <span style="text-decoration: underline;">137</span>803. <span style="text-decoration: underline;">13</span>806  <span style="text-decoration: underline;">60</span>000      <span style="text-decoration: underline;">16</span>252.       <span style="text-decoration: underline;">4</span>263.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> early_vacci…    <span style="text-decoration: underline;">563</span>667.           <span style="text-decoration: underline;">137</span>740. <span style="text-decoration: underline;">13</span>767. <span style="text-decoration: underline;">60</span>000      <span style="text-decoration: underline;">16</span>248.       <span style="text-decoration: underline;">4</span>263.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> late_vaccin…    <span style="text-decoration: underline;">562</span>928.           <span style="text-decoration: underline;">137</span>630. <span style="text-decoration: underline;">13</span>919. <span style="text-decoration: underline;">60</span>000      <span style="text-decoration: underline;">16</span>299.       <span style="text-decoration: underline;">4</span>288.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> no_vaccinat…    <span style="text-decoration: underline;">502</span>810.           <span style="text-decoration: underline;">116</span>470.  <span style="text-decoration: underline;">9</span>152.     0      <span style="text-decoration: underline;">17</span>053.       <span style="text-decoration: underline;">4</span>160.</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> wash_only       <span style="text-decoration: underline;">505</span>962.           <span style="text-decoration: underline;">117</span>686. <span style="text-decoration: underline;">10</span>789.     0          0           0 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> baseline        <span style="text-decoration: underline;">937</span>638.           <span style="text-decoration: underline;">232</span>004. <span style="text-decoration: underline;">33</span>710.     0          0           0 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> cm_only         <span style="text-decoration: underline;">937</span>244.           <span style="text-decoration: underline;">231</span>918. <span style="text-decoration: underline;">28</span>301.     0      <span style="text-decoration: underline;">22</span>901.      <span style="text-decoration: underline;">10</span>769.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> combined_pa…    <span style="text-decoration: underline;">937</span>244.           <span style="text-decoration: underline;">231</span>918. <span style="text-decoration: underline;">28</span>301.     0      <span style="text-decoration: underline;">22</span>901.      <span style="text-decoration: underline;">10</span>769.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> early_vacci…    <span style="text-decoration: underline;">937</span>244.           <span style="text-decoration: underline;">231</span>918. <span style="text-decoration: underline;">28</span>301.     0      <span style="text-decoration: underline;">22</span>901.      <span style="text-decoration: underline;">10</span>769.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> late_vaccin…    <span style="text-decoration: underline;">936</span>463.           <span style="text-decoration: underline;">231</span>701. <span style="text-decoration: underline;">28</span>232. <span style="text-decoration: underline;">60</span>000      <span style="text-decoration: underline;">23</span>307.      <span style="text-decoration: underline;">10</span>853.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> no_vaccinat…    <span style="text-decoration: underline;">908</span>982.           <span style="text-decoration: underline;">224</span>871. <span style="text-decoration: underline;">27</span>348.     0      <span style="text-decoration: underline;">26</span>354       <span style="text-decoration: underline;">10</span>537.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> wash_only       <span style="text-decoration: underline;">910</span>508.           <span style="text-decoration: underline;">225</span>212. <span style="text-decoration: underline;">32</span>685.     0          0           0 </span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 14 more variables: infections_averted &lt;dbl&gt;, cases_averted &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   deaths_averted &lt;dbl&gt;, cost &lt;dbl&gt;, dalys &lt;dbl&gt;, cost_diff &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   dalys_averted &lt;dbl&gt;, icer_cost_per_daly_averted &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   icer_cost_per_death_averted &lt;dbl&gt;, mean_cost_vax &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   mean_cost_care &lt;dbl&gt;, mean_cost_wash &lt;dbl&gt;, nmb &lt;dbl&gt;, inmb &lt;dbl&gt;</span></span></span></code></pre></div>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># High-level report helper</span></span>
-<span><span class="va">rep</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_scenario_report.html">cholera_scenario_report</a></span><span class="op">(</span><span class="va">runs</span>, baseline <span class="op">=</span> <span class="st">"baseline"</span>, include_econ <span class="op">=</span> <span class="cn">TRUE</span>, wtp <span class="op">=</span> <span class="fl">1500</span><span class="op">)</span></span>
-<span><span class="va">rep</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">incidence</span></span></code></pre></div>
-<p><img src="scenario_workflow_files/figure-html/unnamed-chunk-8-1.png" class="r-plt" alt="" width="700"></p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rep</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">ce_plane</span></span></code></pre></div>
-<p><img src="scenario_workflow_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="" width="700"></p>
-  </main>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_scenarios.html">chlaa_plot_scenarios</a></span><span class="op">(</span><span class="va">cmp</span>, metric <span class="op">=</span> <span class="st">"deaths_averted"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="scenario_workflow_files/figure-html/unnamed-chunk-11-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="interpretation">Interpretation<a class="anchor" aria-label="anchor" href="#interpretation"></a>
+</h2>
+<p>Use this pattern when you need transparent post-trigger comparisons.
+For full posterior scenario forecasting, use
+<code><a href="../reference/chlaa_forecast_scenarios_from_fit.html">chlaa_forecast_scenarios_from_fit()</a></code> and
+<code><a href="../reference/chlaa_plot_scenario_forecasts.html">chlaa_plot_scenario_forecasts()</a></code>.</p>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

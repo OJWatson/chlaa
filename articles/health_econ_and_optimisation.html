@@ -63,57 +63,136 @@
 
     
     
-<p>This vignette demonstrates economics defaults, CE outputs, and budget
-optimisation.</p>
+<div class="section level2">
+<h2 id="why-this-workflow">Why This Workflow?<a class="anchor" aria-label="anchor" href="#why-this-workflow"></a>
+</h2>
+<p>This vignette demonstrates how epidemiological scenario output can be
+translated into decision-facing economic summaries:</p>
+<ol style="list-style-type: decimal">
+<li>Explicit assumptions and their sources.</li>
+<li>Incremental costs and health outcomes versus baseline.</li>
+<li>CE plane and CEAC visualisations.</li>
+<li>Constrained budget allocation search.</li>
+</ol>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/OJWatson/chlaa" class="external-link">chlaa</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="build-scenario-runs">1) Build Scenario Runs<a class="anchor" aria-label="anchor" href="#build-scenario-runs"></a>
+</h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_parameters.html">cholera_parameters</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fl">0</span><span class="op">:</span><span class="fl">50</span></span></code></pre></div>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">scenarios</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="../reference/cholera_scenario.html">cholera_scenario</a></span><span class="op">(</span><span class="st">"baseline"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="../reference/cholera_scenario.html">cholera_scenario</a></span><span class="op">(</span><span class="st">"wash_plus_cm"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    chlor_start <span class="op">=</span> <span class="fl">10</span>, chlor_end <span class="op">=</span> <span class="fl">80</span>, chlor_effect <span class="op">=</span> <span class="fl">0.2</span>,</span>
-<span>    hyg_start <span class="op">=</span> <span class="fl">10</span>, hyg_end <span class="op">=</span> <span class="fl">80</span>, hyg_effect <span class="op">=</span> <span class="fl">0.2</span>,</span>
-<span>    orc_start <span class="op">=</span> <span class="fl">10</span>, orc_end <span class="op">=</span> <span class="fl">80</span>, orc_capacity <span class="op">=</span> <span class="va">pars</span><span class="op">$</span><span class="va">orc_capacity</span>,</span>
-<span>    ctc_start <span class="op">=</span> <span class="fl">10</span>, ctc_end <span class="op">=</span> <span class="fl">80</span>, ctc_capacity <span class="op">=</span> <span class="va">pars</span><span class="op">$</span><span class="va">ctc_capacity</span></span>
+<code class="sourceCode R"><span><span class="va">pars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_parameters.html">chlaa_parameters</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fl">0</span><span class="op">:</span><span class="fl">60</span></span>
+<span></span>
+<span><span class="va">scenarios</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/chlaa_scenario.html">chlaa_scenario</a></span><span class="op">(</span><span class="st">"baseline"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/chlaa_scenario.html">chlaa_scenario</a></span><span class="op">(</span><span class="st">"wash_plus_cm"</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    chlor_start <span class="op">=</span> <span class="fl">10</span>, chlor_end <span class="op">=</span> <span class="fl">60</span>, chlor_effect <span class="op">=</span> <span class="fl">0.2</span>,</span>
+<span>    hyg_start <span class="op">=</span> <span class="fl">10</span>, hyg_end <span class="op">=</span> <span class="fl">60</span>, hyg_effect <span class="op">=</span> <span class="fl">0.2</span>,</span>
+<span>    orc_start <span class="op">=</span> <span class="fl">10</span>, orc_end <span class="op">=</span> <span class="fl">60</span>, orc_capacity <span class="op">=</span> <span class="va">pars</span><span class="op">$</span><span class="va">orc_capacity</span>,</span>
+<span>    ctc_start <span class="op">=</span> <span class="fl">10</span>, ctc_end <span class="op">=</span> <span class="fl">60</span>, ctc_capacity <span class="op">=</span> <span class="va">pars</span><span class="op">$</span><span class="va">ctc_capacity</span></span>
 <span>  <span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">runs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_run_scenarios.html">cholera_run_scenarios</a></span><span class="op">(</span><span class="va">pars</span>, <span class="va">scenarios</span>, time <span class="op">=</span> <span class="va">time</span>, n_particles <span class="op">=</span> <span class="fl">30</span>, dt <span class="op">=</span> <span class="fl">1</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<span></span>
+<span><span class="va">runs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_run_scenarios.html">chlaa_run_scenarios</a></span><span class="op">(</span></span>
+<span>  <span class="va">pars</span>,</span>
+<span>  <span class="va">scenarios</span>,</span>
+<span>  time <span class="op">=</span> <span class="va">time</span>,</span>
+<span>  n_particles <span class="op">=</span> <span class="fl">40</span>,</span>
+<span>  dt <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="economics-assumptions-and-source-metadata">2) Economics Assumptions And Source Metadata<a class="anchor" aria-label="anchor" href="#economics-assumptions-and-source-metadata"></a>
+</h2>
+<p>Defaults are illustrative and should be replaced in real
+analyses.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">econ</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_econ_defaults.html">chlaa_econ_defaults</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">econ_sources</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_econ_sources.html">chlaa_econ_sources</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">econ_sources</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                                        name</span></span>
+<span><span class="co">#&gt; cost_per_vaccine_dose             published</span></span>
+<span><span class="co">#&gt; cost_per_orc_treatment           assumption</span></span>
+<span><span class="co">#&gt; cost_per_ctc_treatment           assumption</span></span>
+<span><span class="co">#&gt; cost_chlorination_per_person_day assumption</span></span>
+<span><span class="co">#&gt; cost_hygiene_per_person_day      assumption</span></span>
+<span><span class="co">#&gt; cost_latrine_per_person_day      assumption</span></span>
+<span><span class="co">#&gt;                                                                                                                            source_type</span></span>
+<span><span class="co">#&gt; cost_per_vaccine_dose            Routh et al. (2017) Cost Evaluation of a Government-Conducted Oral Cholera Vaccination Campaign—Haiti</span></span>
+<span><span class="co">#&gt; cost_per_orc_treatment                                                    Illustrative planning assumption for rapid scenario analysis</span></span>
+<span><span class="co">#&gt; cost_per_ctc_treatment                                                    Illustrative planning assumption for rapid scenario analysis</span></span>
+<span><span class="co">#&gt; cost_chlorination_per_person_day                                          Illustrative planning assumption for rapid scenario analysis</span></span>
+<span><span class="co">#&gt; cost_hygiene_per_person_day                                               Illustrative planning assumption for rapid scenario analysis</span></span>
+<span><span class="co">#&gt; cost_latrine_per_person_day                                               Illustrative planning assumption for rapid scenario analysis</span></span>
+<span><span class="co">#&gt;                                  citation</span></span>
+<span><span class="co">#&gt; cost_per_vaccine_dose                2013</span></span>
+<span><span class="co">#&gt; cost_per_orc_treatment                   </span></span>
+<span><span class="co">#&gt; cost_per_ctc_treatment                   </span></span>
+<span><span class="co">#&gt; cost_chlorination_per_person_day         </span></span>
+<span><span class="co">#&gt; cost_hygiene_per_person_day              </span></span>
+<span><span class="co">#&gt; cost_latrine_per_person_day              </span></span>
+<span><span class="co">#&gt;                                                                                                                            source_url</span></span>
+<span><span class="co">#&gt; cost_per_vaccine_dose                                                               https://pmc.ncbi.nlm.nih.gov/articles/PMC5676633/</span></span>
+<span><span class="co">#&gt; cost_per_orc_treatment           No single globally transferable unit cost; should be replaced with context-specific ORS/ORC costing.</span></span>
+<span><span class="co">#&gt; cost_per_ctc_treatment                          No single globally transferable unit cost; should be replaced with local CTC costing.</span></span>
+<span><span class="co">#&gt; cost_chlorination_per_person_day                                 WASH package unit costs vary widely by programme design and context.</span></span>
+<span><span class="co">#&gt; cost_hygiene_per_person_day                                      WASH package unit costs vary widely by programme design and context.</span></span>
+<span><span class="co">#&gt; cost_latrine_per_person_day                                      WASH package unit costs vary widely by programme design and context.</span></span>
+<span><span class="co">#&gt;                                                                                                                                 notes</span></span>
+<span><span class="co">#&gt; cost_per_vaccine_dose            Total campaign cost per dose around USD 2.90 in Haiti 2013; default uses rounded illustrative value.</span></span>
+<span><span class="co">#&gt; cost_per_orc_treatment                                                                                                               </span></span>
+<span><span class="co">#&gt; cost_per_ctc_treatment                                                                                                               </span></span>
+<span><span class="co">#&gt; cost_chlorination_per_person_day                                                                                                     </span></span>
+<span><span class="co">#&gt; cost_hygiene_per_person_day                                                                                                          </span></span>
+<span><span class="co">#&gt; cost_latrine_per_person_day</span></span></code></pre></div>
+<p>Published and assumption entries can be filtered separately:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Load default economics assumptions</span></span>
-<span><span class="va">econ</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_econ_defaults.html">cholera_econ_defaults</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">econ</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 10</span></span>
-<span><span class="co">#&gt;  $ cost_per_vaccine_dose           : num 2</span></span>
-<span><span class="co">#&gt;  $ cost_per_orc_treatment          : num 10</span></span>
-<span><span class="co">#&gt;  $ cost_per_ctc_treatment          : num 80</span></span>
-<span><span class="co">#&gt;  $ cost_chlorination_per_person_day: num 0.02</span></span>
-<span><span class="co">#&gt;  $ cost_hygiene_per_person_day     : num 0.03</span></span>
-<span><span class="co">#&gt;  $ cost_latrine_per_person_day     : num 0.01</span></span>
-<span><span class="co">#&gt;  $ cost_cati_per_person_day        : num 0.05</span></span>
-<span><span class="co">#&gt;  $ dw_symptomatic                  : num 0.188</span></span>
-<span><span class="co">#&gt;  $ duration_symptomatic_days       : num 7</span></span>
-<span><span class="co">#&gt;  $ yll_per_death                   : num 30</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">econ_sources</span>, <span class="va">source_type</span> <span class="op">==</span> <span class="st">"published"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] name        source_type citation    source_url  notes      </span></span>
+<span><span class="co">#&gt; &lt;0 rows&gt; (or 0-length row.names)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="incremental-cost-effectiveness-results">3) Incremental Cost-Effectiveness Results<a class="anchor" aria-label="anchor" href="#incremental-cost-effectiveness-results"></a>
+</h2>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Scenario-level economics and NMB</span></span>
-<span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_compare_scenarios.html">cholera_compare_scenarios</a></span><span class="op">(</span><span class="va">runs</span>, baseline <span class="op">=</span> <span class="st">"baseline"</span>, include_econ <span class="op">=</span> <span class="cn">TRUE</span>, econ <span class="op">=</span> <span class="va">econ</span>, wtp <span class="op">=</span> <span class="fl">1500</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_compare_scenarios.html">chlaa_compare_scenarios</a></span><span class="op">(</span></span>
+<span>  <span class="va">runs</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="st">"baseline"</span>,</span>
+<span>  include_econ <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  econ <span class="op">=</span> <span class="va">econ</span>,</span>
+<span>  wtp <span class="op">=</span> <span class="fl">1500</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">cmp</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 2 × 21</span></span></span>
 <span><span class="co">#&gt;   scenario     infections cases_symptomatic deaths doses orc_treated ctc_treated</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>             <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> baseline        <span style="text-decoration: underline;">549</span>057.           <span style="text-decoration: underline;">130</span>516. <span style="text-decoration: underline;">11</span>130      0          0           0 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> wash_plus_cm    <span style="text-decoration: underline;">477</span>030            <span style="text-decoration: underline;">101</span>847.  <span style="text-decoration: underline;">5</span>781.     0      <span style="text-decoration: underline;">12</span>278.       <span style="text-decoration: underline;">3</span>106.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> baseline        <span style="text-decoration: underline;">566</span>196.           <span style="text-decoration: underline;">138</span>690. <span style="text-decoration: underline;">15</span>564.     0          0           0 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> wash_plus_cm    <span style="text-decoration: underline;">528</span>680.           <span style="text-decoration: underline;">124</span>730. <span style="text-decoration: underline;">10</span>291      0      <span style="text-decoration: underline;">16</span>923.       <span style="text-decoration: underline;">4</span>103.</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 14 more variables: infections_averted &lt;dbl&gt;, cases_averted &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   deaths_averted &lt;dbl&gt;, cost &lt;dbl&gt;, dalys &lt;dbl&gt;, cost_diff &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   dalys_averted &lt;dbl&gt;, icer_cost_per_daly_averted &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   icer_cost_per_death_averted &lt;dbl&gt;, mean_cost_vax &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   mean_cost_care &lt;dbl&gt;, mean_cost_wash &lt;dbl&gt;, nmb &lt;dbl&gt;, inmb &lt;dbl&gt;</span></span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># CEAC</span></span>
-<span><span class="va">ceac_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_ceac.html">cholera_ceac</a></span><span class="op">(</span><span class="va">runs</span>, baseline <span class="op">=</span> <span class="st">"baseline"</span>, wtp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">3000</span>, by <span class="op">=</span> <span class="fl">250</span><span class="op">)</span>, econ <span class="op">=</span> <span class="va">econ</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_ce_plane.html">chlaa_plot_ce_plane</a></span><span class="op">(</span><span class="va">cmp</span><span class="op">)</span></span></code></pre></div>
+<p><img src="health_econ_and_optimisation_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="ceac">4) CEAC<a class="anchor" aria-label="anchor" href="#ceac"></a>
+</h2>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ceac_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_ceac.html">chlaa_ceac</a></span><span class="op">(</span></span>
+<span>  <span class="va">runs</span>,</span>
+<span>  baseline <span class="op">=</span> <span class="st">"baseline"</span>,</span>
+<span>  wtp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">3000</span>, by <span class="op">=</span> <span class="fl">250</span><span class="op">)</span>,</span>
+<span>  econ <span class="op">=</span> <span class="va">econ</span></span>
+<span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">ceac_tbl</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 3</span></span></span>
 <span><span class="co">#&gt;   scenario       wtp prob_best</span></span>
@@ -124,41 +203,62 @@ optimisation.</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> wash_plus_cm   750         1</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> wash_plus_cm  <span style="text-decoration: underline;">1</span>000         1</span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> wash_plus_cm  <span style="text-decoration: underline;">1</span>250         1</span></span></code></pre></div>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Constrained budget optimisation</span></span>
-<span><span class="va">opt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_optimise_budget.html">cholera_optimise_budget</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">ceac_tbl</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">wtp</span>, y <span class="op">=</span> <span class="va">prob_best</span>, colour <span class="op">=</span> <span class="va">scenario</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>linewidth <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
+<span>    x <span class="op">=</span> <span class="st">"WTP (USD per DALY averted)"</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">"Probability cost-effective"</span>,</span>
+<span>    colour <span class="op">=</span> <span class="st">"Scenario"</span>,</span>
+<span>    title <span class="op">=</span> <span class="st">"Cost-effectiveness acceptability curves"</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="health_econ_and_optimisation_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="budget-allocation-optimisation">5) Budget Allocation Optimisation<a class="anchor" aria-label="anchor" href="#budget-allocation-optimisation"></a>
+</h2>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">opt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_optimise_budget.html">chlaa_optimise_budget</a></span><span class="op">(</span></span>
 <span>  pars <span class="op">=</span> <span class="va">pars</span>,</span>
 <span>  budget <span class="op">=</span> <span class="fl">5e5</span>,</span>
 <span>  time <span class="op">=</span> <span class="va">time</span>,</span>
 <span>  n_particles <span class="op">=</span> <span class="fl">20</span>,</span>
-<span>  grid_size <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  dt <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  grid_size <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>  min_fraction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>vax <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span>,</span>
 <span>  max_fraction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>wash <span class="op">=</span> <span class="fl">0.6</span><span class="op">)</span>,</span>
 <span>  max_vax_doses_per_day <span class="op">=</span> <span class="fl">5000</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">opt</span><span class="op">$</span><span class="va">best</span></span>
-<span><span class="co">#&gt;   frac_vax frac_wash frac_care budget_vax budget_wash budget_care doses</span></span>
-<span><span class="co">#&gt; 3     0.25       0.5      0.25     125000      250000      125000 62500</span></span>
-<span><span class="co">#&gt;   wash_intensity deaths    cases</span></span>
-<span><span class="co">#&gt; 3     0.08252459 7936.9 119664.9</span></span></code></pre></div>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">opt</span><span class="op">$</span><span class="va">evaluations</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   frac_vax frac_wash frac_care budget_vax budget_wash budget_care doses</span></span>
-<span><span class="co">#&gt; 1     0.25      0.00      0.75     125000           0      375000 62500</span></span>
-<span><span class="co">#&gt; 2     0.25      0.25      0.50     125000      125000      250000 62500</span></span>
-<span><span class="co">#&gt; 3     0.25      0.50      0.25     125000      250000      125000 62500</span></span>
-<span><span class="co">#&gt; 4     0.50      0.00      0.50     250000           0      250000 70000</span></span>
-<span><span class="co">#&gt; 5     0.50      0.25      0.25     250000      125000      125000 70000</span></span>
-<span><span class="co">#&gt; 6     0.50      0.50      0.00     250000      250000           0 70000</span></span>
-<span><span class="co">#&gt;   wash_intensity  deaths    cases</span></span>
-<span><span class="co">#&gt; 1     0.00000000 8529.20 124050.6</span></span>
-<span><span class="co">#&gt; 2     0.04126230 8081.55 121170.1</span></span>
-<span><span class="co">#&gt; 3     0.08252459 7936.90 119664.9</span></span>
-<span><span class="co">#&gt; 4     0.00000000 8520.00 123484.4</span></span>
-<span><span class="co">#&gt; 5     0.04126230 8211.80 120952.1</span></span>
-<span><span class="co">#&gt; 6     0.08252459 9963.20 125383.6</span></span></code></pre></div>
-  </main>
+<span><span class="co">#&gt;    frac_vax frac_wash frac_care budget_vax budget_wash budget_care doses</span></span>
+<span><span class="co">#&gt; 7 0.2857143 0.1428571 0.5714286   142857.1    71428.57    285714.3 70000</span></span>
+<span><span class="co">#&gt;   wash_intensity   deaths    cases</span></span>
+<span><span class="co">#&gt; 7     0.01971313 12924.05 135429.7</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">opt</span><span class="op">$</span><span class="va">evaluations</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">budget_vax</span>, y <span class="op">=</span> <span class="va">budget_wash</span>, colour <span class="op">=</span> <span class="va">deaths</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">2</span>, alpha <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_viridis.html" class="external-link">scale_colour_viridis_c</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
+<span>    x <span class="op">=</span> <span class="st">"Budget to vaccination"</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">"Budget to WASH"</span>,</span>
+<span>    colour <span class="op">=</span> <span class="st">"Expected deaths"</span>,</span>
+<span>    title <span class="op">=</span> <span class="st">"Budget allocation search surface"</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="health_econ_and_optimisation_files/figure-html/unnamed-chunk-11-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="interpretation">Interpretation<a class="anchor" aria-label="anchor" href="#interpretation"></a>
+</h2>
+<p>These outputs are useful for prioritisation and sensitivity
+exploration, not as final procurement estimates. For deployment, replace
+defaults with local unit costs, local age structure, and
+setting-specific YLL assumptions.</p>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

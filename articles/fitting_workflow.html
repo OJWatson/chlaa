@@ -63,102 +63,236 @@
 
     
     
-<p>This vignette outlines a complete fit-to-data workflow for
-<code>chlaa</code> using a synthetic daily incidence time-series. The
-synthetic data are generated from the model and then observed with
-over-dispersed count noise, yielding a single-wave outbreak profile
-(rapid rise, short peak, gradual decline) that is broadly similar in
-shape to reported cholera outbreak curves.</p>
+<div class="section level2">
+<h2 id="why-this-workflow">Why This Workflow?<a class="anchor" aria-label="anchor" href="#why-this-workflow"></a>
+</h2>
+<p>This vignette demonstrates a full fit-to-forecast cycle with:</p>
+<ol style="list-style-type: decimal">
+<li>A synthetic daily outbreak curve that resembles the qualitative
+pattern often seen in reported cholera surveillance (large first wave,
+suppression period, then rebound).</li>
+<li>A lightweight but fully runnable pMCMC fit.</li>
+<li>Diagnostics that show both parameter behaviour and likelihood
+behaviour.</li>
+<li>A forecast plot that overlays historical observations with model
+uncertainty bands.</li>
+</ol>
+<p>The goal is not to replicate any one outbreak exactly, but to show a
+transparent, reproducible workflow that users can adapt to real
+surveillance data.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/OJWatson/chlaa" class="external-link">chlaa</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="generate-example-outbreak-data">1) Generate Example Outbreak Data<a class="anchor" aria-label="anchor" href="#generate-example-outbreak-data"></a>
+</h2>
+<p>We generate synthetic data with a strong first wave and a smaller
+later rebound. The defaults are tuned for an outbreak profile similar in
+shape to published response analyses.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 1) Build baseline parameters</span></span>
-<span><span class="va">pars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_parameters.html">cholera_parameters</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">example_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_generate_example_outbreak_data.html">chlaa_generate_example_outbreak_data</a></span><span class="op">(</span></span>
+<span>  time <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">330</span>,</span>
+<span>  start_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2021-08-01"</span><span class="op">)</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">42</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">example_data</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">cases</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>linewidth <span class="op">=</span> <span class="fl">0.5</span>, colour <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
+<span>    x <span class="op">=</span> <span class="st">"Date"</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">"Reported cholera cases/day"</span>,</span>
+<span>    title <span class="op">=</span> <span class="st">"Synthetic historical outbreak series"</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="fitting_workflow_files/figure-html/unnamed-chunk-3-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="prepare-data-and-starting-parameters">2) Prepare Data And Starting Parameters<a class="anchor" aria-label="anchor" href="#prepare-data-and-starting-parameters"></a>
+</h2>
+<p>We keep the input format strict (<code>time</code>,
+<code>cases</code>) and use a near-truth start for a stable, fast demo
+fit.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 2) Generate synthetic observed case data (daily counts)</span></span>
-<span><span class="co"># We first simulate a baseline outbreak, then add observation noise.</span></span>
-<span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">70</span></span>
-<span><span class="va">pars</span><span class="op">$</span><span class="va">contact_rate</span> <span class="op">&lt;-</span> <span class="fl">4</span></span>
-<span><span class="va">pars</span><span class="op">$</span><span class="va">trans_prob</span> <span class="op">&lt;-</span> <span class="fl">0.015</span></span>
-<span><span class="va">pars</span><span class="op">$</span><span class="va">reporting_rate</span> <span class="op">&lt;-</span> <span class="fl">0.01</span></span>
-<span><span class="va">pars</span><span class="op">$</span><span class="va">obs_size</span> <span class="op">&lt;-</span> <span class="fl">20</span></span>
+<code class="sourceCode R"><span><span class="va">data_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_prepare_data.html">chlaa_prepare_data</a></span><span class="op">(</span><span class="va">example_data</span>, time_col <span class="op">=</span> <span class="st">"time"</span>, cases_col <span class="op">=</span> <span class="st">"cases"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">sim_truth</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_simulate.html">cholera_simulate</a></span><span class="op">(</span><span class="va">pars</span>, time <span class="op">=</span> <span class="va">time</span>, n_particles <span class="op">=</span> <span class="fl">1</span>, dt <span class="op">=</span> <span class="fl">1</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
-<span><span class="va">mu_obs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">pmax</a></span><span class="op">(</span><span class="va">pars</span><span class="op">$</span><span class="va">reporting_rate</span> <span class="op">*</span> <span class="va">sim_truth</span><span class="op">$</span><span class="va">inc_symptoms</span>, <span class="fl">0.01</span><span class="op">)</span></span>
-<span><span class="va">cases</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/NegBinomial.html" class="external-link">rnbinom</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">mu_obs</span><span class="op">)</span>, mu <span class="op">=</span> <span class="va">mu_obs</span>, size <span class="op">=</span> <span class="va">pars</span><span class="op">$</span><span class="va">obs_size</span><span class="op">)</span></span>
-<span><span class="va">data_raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>day <span class="op">=</span> <span class="va">time</span>, cases <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">cases</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">data_raw</span><span class="op">$</span><span class="va">day</span>, <span class="va">data_raw</span><span class="op">$</span><span class="va">cases</span>, type <span class="op">=</span> <span class="st">"h"</span>, lwd <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>     xlab <span class="op">=</span> <span class="st">"Day"</span>, ylab <span class="op">=</span> <span class="st">"Reported cases"</span>,</span>
-<span>     main <span class="op">=</span> <span class="st">"Synthetic cholera-like outbreak data"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="fitting_workflow_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="" width="700"></p>
+<span><span class="va">pars_start</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">example_data</span>, <span class="st">"truth_parameters"</span><span class="op">)</span></span>
+<span><span class="va">pars_start</span><span class="op">$</span><span class="va">contact_rate</span> <span class="op">&lt;-</span> <span class="va">pars_start</span><span class="op">$</span><span class="va">contact_rate</span> <span class="op">*</span> <span class="fl">0.9</span></span>
+<span><span class="va">pars_start</span><span class="op">$</span><span class="va">trans_prob</span> <span class="op">&lt;-</span> <span class="va">pars_start</span><span class="op">$</span><span class="va">trans_prob</span> <span class="op">*</span> <span class="fl">1.1</span></span>
+<span><span class="va">pars_start</span><span class="op">$</span><span class="va">reporting_rate</span> <span class="op">&lt;-</span> <span class="va">pars_start</span><span class="op">$</span><span class="va">reporting_rate</span> <span class="op">*</span> <span class="fl">0.9</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="fit-with-pmcmc">3) Fit With pMCMC<a class="anchor" aria-label="anchor" href="#fit-with-pmcmc"></a>
+</h2>
+<p>For vignette runtime on CI we use a compact configuration. For real
+analyses, increase particles and chain length.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 3) Prepare and validate case data</span></span>
-<span><span class="va">data_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_prepare_data.html">cholera_prepare_data</a></span><span class="op">(</span><span class="va">data_raw</span>, time_col <span class="op">=</span> <span class="st">"day"</span>, cases_col <span class="op">=</span> <span class="st">"cases"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data_fit</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   time cases</span></span>
-<span><span class="co">#&gt; 1    1     0</span></span>
-<span><span class="co">#&gt; 2    2     0</span></span>
-<span><span class="co">#&gt; 3    3     0</span></span>
-<span><span class="co">#&gt; 4    4     0</span></span>
-<span><span class="co">#&gt; 5    5     0</span></span>
-<span><span class="co">#&gt; 6    6     0</span></span></code></pre></div>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 4) Fit with pMCMC</span></span>
-<span><span class="co"># Keep settings lightweight so the vignette runs quickly in CI.</span></span>
-<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_fit_pmcmc.html">cholera_fit_pmcmc</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_fit_pmcmc.html">chlaa_fit_pmcmc</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">data_fit</span>,</span>
-<span>  pars <span class="op">=</span> <span class="va">pars</span>,</span>
-<span>  n_particles <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  n_steps <span class="op">=</span> <span class="fl">250</span>,</span>
+<span>  pars <span class="op">=</span> <span class="va">pars_start</span>,</span>
+<span>  n_particles <span class="op">=</span> <span class="fl">60</span>,</span>
+<span>  n_steps <span class="op">=</span> <span class="fl">220</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42</span>,</span>
 <span>  proposal_var <span class="op">=</span> <span class="fl">1e-5</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ⡀⠀ Sampling  <span style="color: #00BB00;">■                               </span> |   0% ETA:  9s</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Sampled 250 steps across 1 chain in 1s</span></span>
+<span><span class="co">#&gt; ⡀⠀ Sampling  <span style="color: #00BB00;">■                               </span> |   0% ETA: 10s</span></span>
+<span><span class="co">#&gt; ⠄⠀ Sampling  <span style="color: #00BB00;">■■■■■■■■■■■                     </span> |  33% ETA:  2s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Sampled 220 steps across 1 chain in 3.5s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; &lt;cholera_fit&gt;</span></span>
-<span><span class="co">#&gt; Posterior draws: 250 iterations; 9 parameters</span></span>
-<span><span class="co">#&gt; Data: 70 observations; time range [1, 70]</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;chlaa_fit&gt;</span></span>
+<span><span class="co">#&gt; Posterior draws: 220 iterations; 9 parameters</span></span>
+<span><span class="co">#&gt; Data: 330 observations; time range [1, 330]</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="summaries-and-diagnostics">4) Summaries And Diagnostics<a class="anchor" aria-label="anchor" href="#summaries-and-diagnostics"></a>
+</h2>
+<p>We inspect acceptance, traces, pairwise posterior geometry, and
+likelihood trace.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_fit_report.html">chlaa_fit_report</a></span><span class="op">(</span><span class="va">fit</span>, burnin <span class="op">=</span> <span class="fl">0.25</span>, thin <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">fit_report</span><span class="op">$</span><span class="va">acceptance_rate</span></span>
+<span><span class="co">#&gt; [1] 0.07317073</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 5) Posterior summaries and diagnostics</span></span>
-<span><span class="va">summary_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_posterior_summary.html">cholera_posterior_summary</a></span><span class="op">(</span><span class="va">fit</span>, burnin <span class="op">=</span> <span class="fl">0.3</span>, thin <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">summary_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_posterior_summary.html">chlaa_posterior_summary</a></span><span class="op">(</span><span class="va">fit</span>, burnin <span class="op">=</span> <span class="fl">0.25</span>, thin <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">summary_tbl</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 9 × 6</span></span></span>
-<span><span class="co">#&gt;   parameter             mean      sd `q2p5%`  `q50%` `q97p5%`</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> trans_prob          0.013<span style="text-decoration: underline;">0</span> 0.001<span style="text-decoration: underline;">13</span>  0.010<span style="text-decoration: underline;">3</span>  0.013<span style="text-decoration: underline;">2</span>   0.014<span style="text-decoration: underline;">3</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> contact_rate        3.97   0.006<span style="text-decoration: underline;">63</span>  3.97    3.98     3.99  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> incubation_time     4.86   0.004<span style="text-decoration: underline;">25</span>  4.85    4.85     4.86  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> duration_sym       14.5    0.004<span style="text-decoration: underline;">39</span> 14.5    14.5     14.5   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> reporting_rate      0.011<span style="text-decoration: underline;">3</span> 0.001<span style="text-decoration: underline;">60</span>  0.010<span style="text-decoration: underline;">0</span>  0.010<span style="text-decoration: underline;">6</span>   0.015<span style="text-decoration: underline;">6</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> obs_size           20.0    0.009<span style="text-decoration: underline;">54</span> 20.0    20.0     20.0   </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> seek_severe         0.701  0.015<span style="text-decoration: underline;">6</span>   0.677   0.702    0.727 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> fatality_untreated  0.480  0.004<span style="text-decoration: underline;">60</span>  0.474   0.480    0.491 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">9</span> fatality_treated    0.024<span style="text-decoration: underline;">0</span> 0.006<span style="text-decoration: underline;">46</span>  0.012<span style="text-decoration: underline;">3</span>  0.022<span style="text-decoration: underline;">0</span>   0.038<span style="text-decoration: underline;">5</span></span></span></code></pre></div>
+<span><span class="co">#&gt;   parameter              mean       sd  `q2p5%`   `q50%` `q97p5%`</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                 <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> trans_prob          0.022<span style="text-decoration: underline;">7</span>  0.000<span style="text-decoration: underline;">818</span>  0.020<span style="text-decoration: underline;">8</span>   0.022<span style="text-decoration: underline;">8</span>   0.023<span style="text-decoration: underline;">9</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> contact_rate        7.19    0.006<span style="text-decoration: underline;">32</span>   7.19     7.19     7.21   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> incubation_time     4.85    0.002<span style="text-decoration: underline;">53</span>   4.85     4.86     4.86   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> duration_sym       14.5     0.003<span style="text-decoration: underline;">29</span>  14.5     14.5     14.5    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> reporting_rate      0.028<span style="text-decoration: underline;">9</span>  0.001<span style="text-decoration: underline;">09</span>   0.027<span style="text-decoration: underline;">2</span>   0.028<span style="text-decoration: underline;">7</span>   0.030<span style="text-decoration: underline;">8</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> obs_size           20.0     0.002<span style="text-decoration: underline;">94</span>  20.0     20.0     20.0    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> seek_severe         0.683   0.000<span style="text-decoration: underline;">911</span>  0.680    0.683    0.684  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> fatality_untreated  0.496   0.004<span style="text-decoration: underline;">18</span>   0.492    0.495    0.503  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">9</span> fatality_treated    0.006<span style="text-decoration: underline;">02</span> 0.001<span style="text-decoration: underline;">93</span>   0.002<span style="text-decoration: underline;">48</span>  0.005<span style="text-decoration: underline;">78</span>  0.009<span style="text-decoration: underline;">05</span></span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">diag_report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_fit_report.html">cholera_fit_report</a></span><span class="op">(</span><span class="va">fit</span>, burnin <span class="op">=</span> <span class="fl">0.3</span>, thin <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="va">diag_report</span><span class="op">$</span><span class="va">acceptance_rate</span></span>
-<span><span class="co">#&gt; [1] 0.2873563</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_trace.html">chlaa_plot_trace</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trans_prob"</span>, <span class="st">"contact_rate"</span>, <span class="st">"reporting_rate"</span>, <span class="st">"obs_size"</span><span class="op">)</span>,</span>
+<span>  burnin <span class="op">=</span> <span class="fl">0.25</span>,</span>
+<span>  thin <span class="op">=</span> <span class="fl">2</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="fitting_workflow_files/figure-html/unnamed-chunk-8-1.png" class="r-plt" alt="" width="700"></p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">trace_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_plot_trace.html">cholera_plot_trace</a></span><span class="op">(</span><span class="va">fit</span>, parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trans_prob"</span>, <span class="st">"contact_rate"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">trace_plot</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_likelihood_trace.html">chlaa_plot_likelihood_trace</a></span><span class="op">(</span><span class="va">fit</span>, burnin <span class="op">=</span> <span class="fl">0.25</span>, thin <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="fitting_workflow_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="" width="700"></p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 6) Posterior predictive checks</span></span>
-<span><span class="va">ppc_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_plot_ppc.html">cholera_plot_ppc</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_parameter_pairs.html">chlaa_plot_parameter_pairs</a></span><span class="op">(</span></span>
 <span>  <span class="va">fit</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">data_fit</span>,</span>
-<span>  n_draws <span class="op">=</span> <span class="fl">40</span>,</span>
-<span>  burnin <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trans_prob"</span>, <span class="st">"contact_rate"</span>, <span class="st">"reporting_rate"</span>, <span class="st">"obs_size"</span><span class="op">)</span>,</span>
+<span>  burnin <span class="op">=</span> <span class="fl">0.25</span>,</span>
 <span>  thin <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">42</span></span>
+<span>  max_points <span class="op">=</span> <span class="fl">1000</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">ppc_plot</span></span></code></pre></div>
+<span><span class="co">#&gt; Warning: `stat_contour()`: Zero contours were generated</span></span>
+<span><span class="co">#&gt; Warning in min(x): no non-missing arguments to min; returning Inf</span></span>
+<span><span class="co">#&gt; Warning in max(x): no non-missing arguments to max; returning -Inf</span></span>
+<span><span class="co">#&gt; Warning: `stat_contour()`: Zero contours were generated</span></span>
+<span><span class="co">#&gt; Warning in min(x): no non-missing arguments to min; returning Inf</span></span>
+<span><span class="co">#&gt; Warning in max(x): no non-missing arguments to max; returning -Inf</span></span>
+<span><span class="co">#&gt; Warning: `stat_contour()`: Zero contours were generated</span></span>
+<span><span class="co">#&gt; Warning in min(x): no non-missing arguments to min; returning Inf</span></span>
+<span><span class="co">#&gt; Warning in max(x): no non-missing arguments to max; returning -Inf</span></span></code></pre></div>
 <p><img src="fitting_workflow_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" alt="" width="700"></p>
-  </main>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/chlaa_plot_parameter_vs_likelihood.html">chlaa_plot_parameter_vs_likelihood</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trans_prob"</span>, <span class="st">"contact_rate"</span>, <span class="st">"reporting_rate"</span><span class="op">)</span>,</span>
+<span>  burnin <span class="op">=</span> <span class="fl">0.25</span>,</span>
+<span>  thin <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  max_points <span class="op">=</span> <span class="fl">1000</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; `geom_smooth()` using method = 'loess' and formula = 'y ~ x'</span></span>
+<span><span class="co">#&gt; Warning in simpleLoess(y, x, w, span, degree = degree, parametric = parametric,</span></span>
+<span><span class="co">#&gt; : pseudoinverse used at 7.1886</span></span>
+<span><span class="co">#&gt; Warning in simpleLoess(y, x, w, span, degree = degree, parametric = parametric,</span></span>
+<span><span class="co">#&gt; : neighborhood radius 0.0061006</span></span>
+<span><span class="co">#&gt; Warning in simpleLoess(y, x, w, span, degree = degree, parametric = parametric,</span></span>
+<span><span class="co">#&gt; : reciprocal condition number 1.0407e-16</span></span>
+<span><span class="co">#&gt; Warning in simpleLoess(y, x, w, span, degree = degree, parametric = parametric,</span></span>
+<span><span class="co">#&gt; : There are other near singularities as well. 3.6129e-05</span></span>
+<span><span class="co">#&gt; Warning in simpleLoess(y, x, w, span, degree = degree, parametric = parametric,</span></span>
+<span><span class="co">#&gt; : pseudoinverse used at 0.027201</span></span>
+<span><span class="co">#&gt; Warning in simpleLoess(y, x, w, span, degree = degree, parametric = parametric,</span></span>
+<span><span class="co">#&gt; : neighborhood radius 0.0014762</span></span>
+<span><span class="co">#&gt; Warning in simpleLoess(y, x, w, span, degree = degree, parametric = parametric,</span></span>
+<span><span class="co">#&gt; : reciprocal condition number 6.1111e-17</span></span>
+<span><span class="co">#&gt; Warning in simpleLoess(y, x, w, span, degree = degree, parametric = parametric,</span></span>
+<span><span class="co">#&gt; : There are other near singularities as well. 2.1249e-06</span></span></code></pre></div>
+<p><img src="fitting_workflow_files/figure-html/unnamed-chunk-11-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="posterior-predictive-fit-and-projection">5) Posterior Predictive Fit And Projection<a class="anchor" aria-label="anchor" href="#posterior-predictive-fit-and-projection"></a>
+</h2>
+<p>We forecast beyond the observed horizon and plot central tendency
+plus 50%, 75%, and 95% uncertainty intervals.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">forecast_time</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">400</span></span>
+<span><span class="va">fc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chlaa_forecast_from_fit.html">chlaa_forecast_from_fit</a></span><span class="op">(</span></span>
+<span>  fit <span class="op">=</span> <span class="va">fit</span>,</span>
+<span>  pars <span class="op">=</span> <span class="va">pars_start</span>,</span>
+<span>  time <span class="op">=</span> <span class="va">forecast_time</span>,</span>
+<span>  vars <span class="op">=</span> <span class="st">"inc_symptoms"</span>,</span>
+<span>  include_cases <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  quantiles <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.125</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">0.75</span>, <span class="fl">0.875</span>, <span class="fl">0.975</span><span class="op">)</span>,</span>
+<span>  n_draws <span class="op">=</span> <span class="fl">80</span>,</span>
+<span>  burnin <span class="op">=</span> <span class="fl">0.25</span>,</span>
+<span>  thin <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">42</span>,</span>
+<span>  dt <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  n_particles <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">f_cases</span> <span class="op">&lt;-</span> <span class="va">fc</span><span class="op">[</span><span class="va">fc</span><span class="op">$</span><span class="va">variable</span> <span class="op">==</span> <span class="st">"cases"</span>, <span class="op">]</span></span>
+<span><span class="va">f_cases</span><span class="op">$</span><span class="va">date</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2021-08-01"</span><span class="op">)</span> <span class="op">+</span> <span class="op">(</span><span class="va">f_cases</span><span class="op">$</span><span class="va">time</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">obs</span> <span class="op">&lt;-</span> <span class="va">example_data</span></span>
+<span><span class="va">obs</span><span class="op">$</span><span class="va">date</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="va">obs</span><span class="op">$</span><span class="va">date</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">obs</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">cases</span>, colour <span class="op">=</span> <span class="st">"Historical data"</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">f_cases</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">mean</span>, colour <span class="op">=</span> <span class="st">"Mean projection"</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">0.7</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">f_cases</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">q0p25</span>, colour <span class="op">=</span> <span class="st">"50% UI"</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">f_cases</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">q0p75</span>, colour <span class="op">=</span> <span class="st">"50% UI"</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">f_cases</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">q0p125</span>, colour <span class="op">=</span> <span class="st">"75% UI"</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">0.4</span>, linetype <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">f_cases</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">q0p875</span>, colour <span class="op">=</span> <span class="st">"75% UI"</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">0.4</span>, linetype <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">f_cases</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">q0p025</span>, colour <span class="op">=</span> <span class="st">"95% UI"</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">f_cases</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">date</span>, y <span class="op">=</span> <span class="va">q0p975</span>, colour <span class="op">=</span> <span class="st">"95% UI"</span><span class="op">)</span>, linewidth <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_colour_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Historical data"</span> <span class="op">=</span> <span class="st">"black"</span>,</span>
+<span>    <span class="st">"Mean projection"</span> <span class="op">=</span> <span class="st">"#2c7f62"</span>,</span>
+<span>    <span class="st">"50% UI"</span> <span class="op">=</span> <span class="st">"#b88a66"</span>,</span>
+<span>    <span class="st">"75% UI"</span> <span class="op">=</span> <span class="st">"#8c8c8c"</span>,</span>
+<span>    <span class="st">"95% UI"</span> <span class="op">=</span> <span class="st">"#9a3b32"</span></span>
+<span>  <span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
+<span>    x <span class="op">=</span> <span class="st">"Date"</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">"No. of cholera cases/day"</span>,</span>
+<span>    colour <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    title <span class="op">=</span> <span class="st">"Historical data and fitted model projection"</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="fitting_workflow_files/figure-html/unnamed-chunk-12-1.png" class="r-plt" alt="" width="700"></p>
+</div>
+<div class="section level2">
+<h2 id="interpretation">Interpretation<a class="anchor" aria-label="anchor" href="#interpretation"></a>
+</h2>
+<p>In this synthetic example, the model reproduces the broad outbreak
+dynamics and uncertainty envelope. On real data, you would next:</p>
+<ol style="list-style-type: decimal">
+<li>Run longer chains and multiple seeds.</li>
+<li>Check convergence diagnostics more formally.</li>
+<li>Stress-test assumptions (reporting process, intervention windows,
+and priors).</li>
+<li>Carry posterior uncertainty through scenario and economic
+analyses.</li>
+</ol>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

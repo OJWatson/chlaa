@@ -95,77 +95,77 @@
 <ul><li>
 <code>parameters.R</code>
 <ul><li>
-<code><a href="reference/cholera_parameter_info.html">cholera_parameter_info()</a></code>: default values + metadata</li>
+<code><a href="reference/chlaa_parameter_info.html">chlaa_parameter_info()</a></code>: default values + metadata</li>
 <li>
-<code><a href="reference/cholera_parameters.html">cholera_parameters()</a></code>: build parameter list with overrides</li>
+<code><a href="reference/chlaa_parameters.html">chlaa_parameters()</a></code>: build parameter list with overrides</li>
 <li>
-<code><a href="reference/cholera_parameters_validate.html">cholera_parameters_validate()</a></code>: basic sanity checks</li>
+<code><a href="reference/chlaa_parameters_validate.html">chlaa_parameters_validate()</a></code>: basic sanity checks</li>
 </ul></li>
 <li>
 <code>model.R</code>
 <ul><li>
-<code><a href="reference/cholera_simulate.html">cholera_simulate()</a></code>: run the model via dust2</li>
+<code><a href="reference/chlaa_simulate.html">chlaa_simulate()</a></code>: run the model via dust2</li>
 <li>
-<code>cholera_generator()</code>: internal generator getter (packaged generator or runtime odin2 compile)</li>
+<code>chlaa_generator()</code>: internal generator getter (packaged generator or runtime odin2 compile)</li>
 </ul></li>
 <li>
 <code>fit.R</code>
 <ul><li>
-<code><a href="reference/cholera_fit_pmcmc.html">cholera_fit_pmcmc()</a></code>: particle MCMC fitting (monty + dust2)</li>
+<code><a href="reference/chlaa_fit_pmcmc.html">chlaa_fit_pmcmc()</a></code>: particle MCMC fitting (monty + dust2)</li>
 </ul></li>
 <li>
 <code>fit_object.R</code>
 <ul><li>
-<code>cholera_fit</code> S3 helpers (<code>print</code>, <code>summary</code>, <code><a href="reference/cholera_posterior_summary.html">cholera_posterior_summary()</a></code>)</li>
+<code>chlaa_fit</code> S3 helpers (<code>print</code>, <code>summary</code>, <code><a href="reference/chlaa_posterior_summary.html">chlaa_posterior_summary()</a></code>)</li>
 </ul></li>
 <li>
 <code>posterior.R</code>
-<ul><li>draw extraction + parameter updating (<code><a href="reference/cholera_update_from_fit.html">cholera_update_from_fit()</a></code>)</li>
-<li>posterior predictive simulations (<code><a href="reference/cholera_simulate_posterior.html">cholera_simulate_posterior()</a></code>)</li>
+<ul><li>draw extraction + parameter updating (<code><a href="reference/chlaa_update_from_fit.html">chlaa_update_from_fit()</a></code>)</li>
+<li>posterior predictive simulations (<code><a href="reference/chlaa_simulate_posterior.html">chlaa_simulate_posterior()</a></code>)</li>
 </ul></li>
 <li>
 <code>scenario_builder.R</code>
-<ul><li><code><a href="reference/cholera_trigger_time_from_sim.html">cholera_trigger_time_from_sim()</a></code></li>
+<ul><li><code><a href="reference/chlaa_trigger_time_from_sim.html">chlaa_trigger_time_from_sim()</a></code></li>
 <li>
-<code><a href="reference/cholera_make_aa_scenarios.html">cholera_make_aa_scenarios()</a></code>: AA scenario templates</li>
+<code><a href="reference/chlaa_make_aa_scenarios.html">chlaa_make_aa_scenarios()</a></code>: AA scenario templates</li>
 </ul></li>
 <li>
 <code>scenario.R</code>
 <ul><li>
-<code><a href="reference/cholera_scenario.html">cholera_scenario()</a></code>, <code><a href="reference/cholera_run_scenarios.html">cholera_run_scenarios()</a></code>
+<code><a href="reference/chlaa_scenario.html">chlaa_scenario()</a></code>, <code><a href="reference/chlaa_run_scenarios.html">chlaa_run_scenarios()</a></code>
 </li>
 <li>
-<code><a href="reference/cholera_compare_scenarios.html">cholera_compare_scenarios()</a></code> (optionally with economics)</li>
+<code><a href="reference/chlaa_compare_scenarios.html">chlaa_compare_scenarios()</a></code> (optionally with economics)</li>
 </ul></li>
 <li>
 <code>counterfactual_grid.R</code>
 <ul><li>
-<code><a href="reference/cholera_counterfactual_grid.html">cholera_counterfactual_grid()</a></code>: tidy grid of scenario knobs</li>
-<li><code><a href="reference/cholera_run_counterfactual_grid.html">cholera_run_counterfactual_grid()</a></code></li>
+<code><a href="reference/chlaa_counterfactual_grid.html">chlaa_counterfactual_grid()</a></code>: tidy grid of scenario knobs</li>
+<li><code><a href="reference/chlaa_run_counterfactual_grid.html">chlaa_run_counterfactual_grid()</a></code></li>
 </ul></li>
 <li>
 <code>forecast.R</code>
 <ul><li>
-<code><a href="reference/cholera_forecast_from_fit.html">cholera_forecast_from_fit()</a></code> and plotting helpers</li>
+<code><a href="reference/chlaa_forecast_from_fit.html">chlaa_forecast_from_fit()</a></code> and plotting helpers</li>
 <li>
-<code><a href="reference/cholera_plot_ppc.html">cholera_plot_ppc()</a></code> for posterior predictive checks of cases</li>
+<code><a href="reference/chlaa_plot_ppc.html">chlaa_plot_ppc()</a></code> for posterior predictive checks of cases</li>
 </ul></li>
 <li>
 <code>forecast_scenarios.R</code>, <code>plot_scenario_forecasts.R</code>
 <ul><li>
-<code><a href="reference/cholera_forecast_scenarios_from_fit.html">cholera_forecast_scenarios_from_fit()</a></code>: paired scenario forecasts + differences vs baseline</li>
+<code><a href="reference/chlaa_forecast_scenarios_from_fit.html">chlaa_forecast_scenarios_from_fit()</a></code>: paired scenario forecasts + differences vs baseline</li>
 <li>
-<code><a href="reference/cholera_plot_scenario_forecasts.html">cholera_plot_scenario_forecasts()</a></code>: overlay or facet, absolute or differences</li>
+<code><a href="reference/chlaa_plot_scenario_forecasts.html">chlaa_plot_scenario_forecasts()</a></code>: overlay or facet, absolute or differences</li>
 </ul></li>
 <li>
 <code>health_econ.R</code>
 <ul><li>
-<code><a href="reference/cholera_health_econ.html">cholera_health_econ()</a></code>: costs + DALYs using model accumulators</li>
+<code><a href="reference/chlaa_health_econ.html">chlaa_health_econ()</a></code>: costs + DALYs using model accumulators</li>
 </ul></li>
 <li>
 <code>optimise.R</code>
 <ul><li>
-<code><a href="reference/cholera_optimise_budget.html">cholera_optimise_budget()</a></code>: constrained allocation optimiser (grid/continuous modes)</li>
+<code><a href="reference/chlaa_optimise_budget.html">chlaa_optimise_budget()</a></code>: constrained allocation optimiser (grid/continuous modes)</li>
 </ul></li>
 <li>
 <code>plot.R</code>
@@ -175,7 +175,7 @@
 </div>
 <div class="section level2">
 <h2 id="running-the-full-stack">Running the full stack<a class="anchor" aria-label="anchor" href="#running-the-full-stack"></a></h2>
-<p>Typical workflow: 1. <code>pars &lt;- cholera_parameters()</code> 2. <code>sim &lt;- cholera_simulate(pars, ...)</code> 3. <code>fit &lt;- cholera_fit_pmcmc(data, pars, ...)</code> 4. <code>pars_cal &lt;- cholera_update_from_fit(fit, pars)</code> 5. <code>sc &lt;- cholera_make_aa_scenarios(pars_cal, trigger_time = ...)</code> 6. <code>runs &lt;- cholera_run_scenarios(pars_cal, sc, time = ...)</code> 7. <code>cmp &lt;- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE)</code> 8. Forecasts: - <code>cholera_forecast_from_fit(fit, ...)</code> - <code>cholera_forecast_scenarios_from_fit(fit, scenarios = sc, ...)</code></p>
+<p>Typical workflow: 1. <code>pars &lt;- chlaa_parameters()</code> 2. <code>sim &lt;- chlaa_simulate(pars, ...)</code> 3. <code>fit &lt;- chlaa_fit_pmcmc(data, pars, ...)</code> 4. <code>pars_cal &lt;- chlaa_update_from_fit(fit, pars)</code> 5. <code>sc &lt;- chlaa_make_aa_scenarios(pars_cal, trigger_time = ...)</code> 6. <code>runs &lt;- chlaa_run_scenarios(pars_cal, sc, time = ...)</code> 7. <code>cmp &lt;- chlaa_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE)</code> 8. Forecasts: - <code>chlaa_forecast_from_fit(fit, ...)</code> - <code>chlaa_forecast_scenarios_from_fit(fit, scenarios = sc, ...)</code></p>
 </div>
 <div class="section level2">
 <h2 id="guardrails">Guardrails<a class="anchor" aria-label="anchor" href="#guardrails"></a></h2>
