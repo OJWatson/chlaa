@@ -63,34 +63,101 @@
 
     
     
-<p>This vignette outlines a typical fit-to-data workflow for
-<code>chlaa</code>.</p>
+<p>This vignette outlines a complete fit-to-data workflow for
+<code>chlaa</code> using a synthetic daily incidence time-series. The
+synthetic data are generated from the model and then observed with
+over-dispersed count noise, yielding a single-wave outbreak profile
+(rapid rise, short peak, gradual decline) that is broadly similar in
+shape to reported cholera outbreak curves.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/OJWatson/chlaa" class="external-link">chlaa</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 1) Build baseline parameters</span></span>
+<span><span class="va">pars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_parameters.html">cholera_parameters</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 2) Generate synthetic observed case data (daily counts)</span></span>
+<span><span class="co"># We first simulate a baseline outbreak, then add observation noise.</span></span>
+<span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">70</span></span>
+<span><span class="va">pars</span><span class="op">$</span><span class="va">contact_rate</span> <span class="op">&lt;-</span> <span class="fl">4</span></span>
+<span><span class="va">pars</span><span class="op">$</span><span class="va">trans_prob</span> <span class="op">&lt;-</span> <span class="fl">0.015</span></span>
+<span><span class="va">pars</span><span class="op">$</span><span class="va">reporting_rate</span> <span class="op">&lt;-</span> <span class="fl">0.01</span></span>
+<span><span class="va">pars</span><span class="op">$</span><span class="va">obs_size</span> <span class="op">&lt;-</span> <span class="fl">20</span></span>
 <span></span>
-<span><span class="co"># 1) Build baseline parameters</span></span>
-<span><span class="va">pars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_parameters.html">cholera_parameters</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">sim_truth</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_simulate.html">cholera_simulate</a></span><span class="op">(</span><span class="va">pars</span>, time <span class="op">=</span> <span class="va">time</span>, n_particles <span class="op">=</span> <span class="fl">1</span>, dt <span class="op">=</span> <span class="fl">1</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">mu_obs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">pmax</a></span><span class="op">(</span><span class="va">pars</span><span class="op">$</span><span class="va">reporting_rate</span> <span class="op">*</span> <span class="va">sim_truth</span><span class="op">$</span><span class="va">inc_symptoms</span>, <span class="fl">0.01</span><span class="op">)</span></span>
+<span><span class="va">cases</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/NegBinomial.html" class="external-link">rnbinom</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">mu_obs</span><span class="op">)</span>, mu <span class="op">=</span> <span class="va">mu_obs</span>, size <span class="op">=</span> <span class="va">pars</span><span class="op">$</span><span class="va">obs_size</span><span class="op">)</span></span>
+<span><span class="va">data_raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>day <span class="op">=</span> <span class="va">time</span>, cases <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">cases</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 2) Prepare and validate case data</span></span>
-<span><span class="va">data_raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>time <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">60</span>, cases <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample.int</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">60</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">-</span> <span class="fl">1L</span><span class="op">)</span></span>
-<span><span class="va">data_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_prepare_data.html">cholera_prepare_data</a></span><span class="op">(</span><span class="va">data_raw</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 3) Fit with pMCMC</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">data_raw</span><span class="op">$</span><span class="va">day</span>, <span class="va">data_raw</span><span class="op">$</span><span class="va">cases</span>, type <span class="op">=</span> <span class="st">"h"</span>, lwd <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>     xlab <span class="op">=</span> <span class="st">"Day"</span>, ylab <span class="op">=</span> <span class="st">"Reported cases"</span>,</span>
+<span>     main <span class="op">=</span> <span class="st">"Synthetic cholera-like outbreak data"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="fitting_workflow_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="" width="700"></p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 3) Prepare and validate case data</span></span>
+<span><span class="va">data_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_prepare_data.html">cholera_prepare_data</a></span><span class="op">(</span><span class="va">data_raw</span>, time_col <span class="op">=</span> <span class="st">"day"</span>, cases_col <span class="op">=</span> <span class="st">"cases"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data_fit</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   time cases</span></span>
+<span><span class="co">#&gt; 1    1     0</span></span>
+<span><span class="co">#&gt; 2    2     0</span></span>
+<span><span class="co">#&gt; 3    3     0</span></span>
+<span><span class="co">#&gt; 4    4     0</span></span>
+<span><span class="co">#&gt; 5    5     0</span></span>
+<span><span class="co">#&gt; 6    6     0</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 4) Fit with pMCMC</span></span>
+<span><span class="co"># Keep settings lightweight so the vignette runs quickly in CI.</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_fit_pmcmc.html">cholera_fit_pmcmc</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">data_fit</span>,</span>
 <span>  pars <span class="op">=</span> <span class="va">pars</span>,</span>
-<span>  n_particles <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>  n_steps <span class="op">=</span> <span class="fl">2000</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">1</span></span>
+<span>  n_particles <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  n_steps <span class="op">=</span> <span class="fl">250</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">42</span>,</span>
+<span>  proposal_var <span class="op">=</span> <span class="fl">1e-5</span></span>
 <span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 4) Posterior summaries and diagnostics</span></span>
-<span><span class="va">summary_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_posterior_summary.html">cholera_posterior_summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span><span class="va">diag_report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_fit_report.html">cholera_fit_report</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span><span class="va">trace_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_plot_trace.html">cholera_plot_trace</a></span><span class="op">(</span><span class="va">fit</span>, parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trans_prob"</span>, <span class="st">"contact_rate"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 5) Posterior predictive checks</span></span>
-<span><span class="va">ppc_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_plot_ppc.html">cholera_plot_ppc</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co">#&gt; ⡀⠀ Sampling  <span style="color: #00BB00;">■                               </span> |   0% ETA:  9s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Sampled 250 steps across 1 chain in 1s</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="va">fit</span></span>
+<span><span class="co">#&gt; &lt;cholera_fit&gt;</span></span>
+<span><span class="co">#&gt; Posterior draws: 250 iterations; 9 parameters</span></span>
+<span><span class="co">#&gt; Data: 70 observations; time range [1, 70]</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 5) Posterior summaries and diagnostics</span></span>
+<span><span class="va">summary_tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_posterior_summary.html">cholera_posterior_summary</a></span><span class="op">(</span><span class="va">fit</span>, burnin <span class="op">=</span> <span class="fl">0.3</span>, thin <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">summary_tbl</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 9 × 6</span></span></span>
+<span><span class="co">#&gt;   parameter             mean      sd `q2p5%`  `q50%` `q97p5%`</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> trans_prob          0.013<span style="text-decoration: underline;">0</span> 0.001<span style="text-decoration: underline;">13</span>  0.010<span style="text-decoration: underline;">3</span>  0.013<span style="text-decoration: underline;">2</span>   0.014<span style="text-decoration: underline;">3</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> contact_rate        3.97   0.006<span style="text-decoration: underline;">63</span>  3.97    3.98     3.99  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> incubation_time     4.86   0.004<span style="text-decoration: underline;">25</span>  4.85    4.85     4.86  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> duration_sym       14.5    0.004<span style="text-decoration: underline;">39</span> 14.5    14.5     14.5   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> reporting_rate      0.011<span style="text-decoration: underline;">3</span> 0.001<span style="text-decoration: underline;">60</span>  0.010<span style="text-decoration: underline;">0</span>  0.010<span style="text-decoration: underline;">6</span>   0.015<span style="text-decoration: underline;">6</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> obs_size           20.0    0.009<span style="text-decoration: underline;">54</span> 20.0    20.0     20.0   </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> seek_severe         0.701  0.015<span style="text-decoration: underline;">6</span>   0.677   0.702    0.727 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> fatality_untreated  0.480  0.004<span style="text-decoration: underline;">60</span>  0.474   0.480    0.491 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">9</span> fatality_treated    0.024<span style="text-decoration: underline;">0</span> 0.006<span style="text-decoration: underline;">46</span>  0.012<span style="text-decoration: underline;">3</span>  0.022<span style="text-decoration: underline;">0</span>   0.038<span style="text-decoration: underline;">5</span></span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">diag_report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_fit_report.html">cholera_fit_report</a></span><span class="op">(</span><span class="va">fit</span>, burnin <span class="op">=</span> <span class="fl">0.3</span>, thin <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">diag_report</span><span class="op">$</span><span class="va">acceptance_rate</span></span>
+<span><span class="co">#&gt; [1] 0.2873563</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">trace_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_plot_trace.html">cholera_plot_trace</a></span><span class="op">(</span><span class="va">fit</span>, parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trans_prob"</span>, <span class="st">"contact_rate"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">trace_plot</span></span></code></pre></div>
+<p><img src="fitting_workflow_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="" width="700"></p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 6) Posterior predictive checks</span></span>
+<span><span class="va">ppc_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cholera_plot_ppc.html">cholera_plot_ppc</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">data_fit</span>,</span>
+<span>  n_draws <span class="op">=</span> <span class="fl">40</span>,</span>
+<span>  burnin <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  thin <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">42</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">ppc_plot</span></span></code></pre></div>
+<p><img src="fitting_workflow_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" alt="" width="700"></p>
   </main>
 </div>
 
