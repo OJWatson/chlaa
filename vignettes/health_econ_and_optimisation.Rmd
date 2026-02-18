@@ -13,12 +13,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 This vignette demonstrates economics defaults, CE outputs, and budget optimisation.
 
-```{r, eval = FALSE}
+```{r}
 library(chlaa)
+set.seed(1)
+```
 
+```{r}
 pars <- cholera_parameters()
-time <- 0:120
+time <- 0:50
+```
 
+```{r}
 scenarios <- list(
   cholera_scenario("baseline", list()),
   cholera_scenario("wash_plus_cm", list(
@@ -28,26 +33,43 @@ scenarios <- list(
     ctc_start = 10, ctc_end = 80, ctc_capacity = pars$ctc_capacity
   ))
 )
-runs <- cholera_run_scenarios(pars, scenarios, time = time, n_particles = 200, dt = 0.25, seed = 1)
+runs <- cholera_run_scenarios(pars, scenarios, time = time, n_particles = 30, dt = 1, seed = 1)
+```
 
+```{r}
 # Load default economics assumptions
 econ <- cholera_econ_defaults()
+str(econ)
+```
 
+```{r}
 # Scenario-level economics and NMB
 cmp <- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE, econ = econ, wtp = 1500)
+cmp
+```
 
+```{r}
 # CEAC
 ceac_tbl <- cholera_ceac(runs, baseline = "baseline", wtp = seq(0, 3000, by = 250), econ = econ)
+head(ceac_tbl)
+```
 
+```{r}
 # Constrained budget optimisation
 opt <- cholera_optimise_budget(
   pars = pars,
   budget = 5e5,
   time = time,
-  n_particles = 100,
+  n_particles = 20,
+  grid_size = 5,
+  dt = 1,
   min_fraction = list(vax = 0.1),
   max_fraction = list(wash = 0.6),
   max_vax_doses_per_day = 5000
 )
 opt$best
+```
+
+```{r}
+head(opt$evaluations)
 ```

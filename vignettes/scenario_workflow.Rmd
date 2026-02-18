@@ -13,29 +13,50 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 This vignette shows how to construct and compare intervention scenarios.
 
-```{r, eval = FALSE}
+```{r}
 library(chlaa)
+set.seed(1)
+```
 
+```{r}
 pars <- cholera_parameters()
-time <- 0:180
+time <- 0:60
+```
 
+```{r}
 # Standard operational templates
 scenarios <- cholera_standard_scenarios(
   pars = pars,
-  trigger_time = 30,
+  trigger_time = 14,
   horizon = max(time),
-  vax_total_doses = 280000
+  vax_total_doses = 60000
 )
+vapply(scenarios, `[[`, character(1), "name")
+```
 
+```{r}
 # Simulate
-runs <- cholera_run_scenarios(pars, scenarios, time = time, n_particles = 200, dt = 0.25, seed = 1)
+runs <- cholera_run_scenarios(pars, scenarios, time = time, n_particles = 25, dt = 1, seed = 1)
+head(runs)
+```
 
+```{r}
 # Summaries and comparisons
 summary_tbl <- cholera_scenario_summary(runs, baseline = "baseline")
-cmp <- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE, wtp = 1500)
+summary_tbl
+```
 
+```{r}
+cmp <- cholera_compare_scenarios(runs, baseline = "baseline", include_econ = TRUE, wtp = 1500)
+cmp
+```
+
+```{r}
 # High-level report helper
 rep <- cholera_scenario_report(runs, baseline = "baseline", include_econ = TRUE, wtp = 1500)
 rep$plots$incidence
+```
+
+```{r}
 rep$plots$ce_plane
 ```

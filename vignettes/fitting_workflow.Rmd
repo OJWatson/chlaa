@@ -11,32 +11,86 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-This vignette outlines a typical fit-to-data workflow for `chlaa`.
+This vignette outlines a complete fit-to-data workflow for `chlaa` using a
+synthetic daily incidence time-series. The synthetic data are generated from
+the model and then observed with over-dispersed count noise, yielding a
+single-wave outbreak profile (rapid rise, short peak, gradual decline) that is
+broadly similar in shape to reported cholera outbreak curves.
 
-```{r, eval = FALSE}
+```{r}
 library(chlaa)
+set.seed(42)
+```
 
+```{r}
 # 1) Build baseline parameters
 pars <- cholera_parameters()
+```
 
-# 2) Prepare and validate case data
-data_raw <- data.frame(time = 1:60, cases = sample.int(10, 60, replace = TRUE) - 1L)
-data_fit <- cholera_prepare_data(data_raw)
+```{r}
+# 2) Generate synthetic observed case data (daily counts)
+# We first simulate a baseline outbreak, then add observation noise.
+time <- 1:70
+pars$contact_rate <- 4
+pars$trans_prob <- 0.015
+pars$reporting_rate <- 0.01
+pars$obs_size <- 20
 
-# 3) Fit with pMCMC
+sim_truth <- cholera_simulate(pars, time = time, n_particles = 1, dt = 1, seed = 42)
+mu_obs <- pmax(pars$reporting_rate * sim_truth$inc_symptoms, 0.01)
+cases <- rnbinom(length(mu_obs), mu = mu_obs, size = pars$obs_size)
+data_raw <- data.frame(day = time, cases = as.integer(cases))
+
+plot(data_raw$day, data_raw$cases, type = "h", lwd = 2,
+     xlab = "Day", ylab = "Reported cases",
+     main = "Synthetic cholera-like outbreak data")
+```
+
+```{r}
+# 3) Prepare and validate case data
+data_fit <- cholera_prepare_data(data_raw, time_col = "day", cases_col = "cases")
+head(data_fit)
+```
+
+```{r}
+# 4) Fit with pMCMC
+# Keep settings lightweight so the vignette runs quickly in CI.
 fit <- cholera_fit_pmcmc(
   data = data_fit,
   pars = pars,
-  n_particles = 200,
-  n_steps = 2000,
-  seed = 1
+  n_particles = 50,
+  n_steps = 250,
+  seed = 42,
+  proposal_var = 1e-5
 )
+fit
+```
 
-# 4) Posterior summaries and diagnostics
-summary_tbl <- cholera_posterior_summary(fit)
-diag_report <- cholera_fit_report(fit)
+```{r}
+# 5) Posterior summaries and diagnostics
+summary_tbl <- cholera_posterior_summary(fit, burnin = 0.3, thin = 2)
+summary_tbl
+```
+
+```{r}
+diag_report <- cholera_fit_report(fit, burnin = 0.3, thin = 2)
+diag_report$acceptance_rate
+```
+
+```{r}
 trace_plot <- cholera_plot_trace(fit, parameters = c("trans_prob", "contact_rate"))
+trace_plot
+```
 
-# 5) Posterior predictive checks
-ppc_plot <- cholera_plot_ppc(fit)
+```{r}
+# 6) Posterior predictive checks
+ppc_plot <- cholera_plot_ppc(
+  fit,
+  data = data_fit,
+  n_draws = 40,
+  burnin = 0.3,
+  thin = 2,
+  seed = 42
+)
+ppc_plot
 ```
