@@ -11,3 +11,5 @@
 ^inst/stan/vr_reporting_model\.rds$
 ^doc$
 ^Meta$
+^vignettes_src$
+^vignettes/.*_full\.html$

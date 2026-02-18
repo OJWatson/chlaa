@@ -3,6 +3,7 @@
 S3method(print,chlaa_fit)
 S3method(summary,chlaa_fit)
 export(chlaa_as_fit)
+export(chlaa_case_study_setup)
 export(chlaa_ceac)
 export(chlaa_compare_scenarios)
 export(chlaa_counterfactual_grid)

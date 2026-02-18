@@ -25,7 +25,8 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    pkgdown
+    pkgdown,
+    GGally
 Imports:
     dust2,
     dplyr,

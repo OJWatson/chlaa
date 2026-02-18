@@ -13,92 +13,100 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 ## Why This Workflow?
 
-This vignette shows how to move from a baseline simulation to operational scenarios,
-with emphasis on clear comparisons:
+This vignette uses the same shared case-study object as the fitting vignette,
+then compares four paper-style intervention scenarios in one coherent view:
 
-1. Trigger detection.
-2. Snapshot branching (counterfactuals from a shared epidemic state).
-3. Overlay plots and baseline-difference plots.
-4. Compact scenario summary tables.
+1. Baseline response.
+2. Anticipatory action.
+3. Anticipatory action plus one vaccine dose.
+4. Anticipatory action plus two vaccine doses.
 
 ```{r}
 library(chlaa)
 library(ggplot2)
-set.seed(1)
-```
+library(dplyr)
 
-## 1) Baseline Preview And Trigger Time
+case_study <- chlaa_case_study_setup(seed = 42)
+pars <- case_study$pars
+scenarios <- case_study$scenarios
+time <- case_study$time
 
-We use a simple threshold trigger (`15` daily cases) as an example operational rule.
-
-```{r}
-pars <- chlaa_parameters()
-time_preview <- 0:260
-
-baseline_preview <- chlaa_simulate(
-  pars,
-  time = time_preview,
-  n_particles = 40,
-  dt = 1,
-  seed = 1
-)
-
-trigger_time <- chlaa_trigger_time_from_sim(
-  baseline_preview,
-  threshold = 15,
-  var = "inc_symptoms"
-)
-trigger_time
-```
-
-## 2) Build Standard Scenario Set
-
-```{r}
-scenarios <- chlaa_standard_scenarios(
-  pars = pars,
-  trigger_time = trigger_time,
-  horizon = max(time_preview),
-  vax_total_doses = 60000
-)
 vapply(scenarios, `[[`, character(1), "name")
 ```
 
-## 3) Branch Counterfactuals From A Shared Snapshot
-
-Snapshot branching keeps pre-trigger epidemic history identical across scenarios,
-which improves interpretability of differences after the intervention start.
+## 1) Run The Scenario Set
 
 ```{r}
-snap <- chlaa_snapshot_create(
+runs <- chlaa_run_scenarios(
   pars = pars,
-  snapshot_time = trigger_time,
+  scenarios = scenarios,
+  time = time,
   n_particles = 40,
   dt = 1,
   seed = 1
 )
-
-post_time <- trigger_time:max(time_preview)
-runs <- chlaa_run_scenarios_from_snapshot(
-  snapshot = snap,
-  pars = pars,
-  scenarios = scenarios,
-  time = post_time
-)
-
-head(runs)
 ```
 
-## 4) Compare Scenario Trajectories
+## 2) Plot Infection-Rate Trajectories Together
 
 ```{r}
-chlaa_plot_scenario_overlay(runs, var = "inc_symptoms")
+plot_df <- runs |>
+  group_by(scenario, time) |>
+  summarise(infections_per_day = mean(inc_infections), .groups = "drop") |>
+  mutate(
+    date = case_study$dates$start_date + time,
+    infections_k = infections_per_day / 1000
+  )
+
+label_map <- c(
+  scenario_1_baseline = "Scenario 1: baseline",
+  scenario_2_anticipatory_action = "Scenario 2: anticipatory action",
+  scenario_3_anticipatory_action_plus_one_vaccine_dose = "Scenario 3: anticipatory action plus one vaccine dose",
+  scenario_4_anticipatory_action_plus_two_vaccine_doses = "Scenario 4: anticipatory action plus two vaccine doses"
+)
+
+plot_df$scenario_label <- label_map[plot_df$scenario]
+
+trigger_date <- case_study$dates$trigger_date
+declaration_date <- case_study$dates$declaration_date
+
+# Style mirrors the paper-like comparison: all scenarios together,
+# intervention timing marked, and infection rates shown in thousands/day.
+ggplot(plot_df, aes(x = date, y = infections_k, colour = scenario_label, linetype = scenario_label)) +
+  geom_line(linewidth = 0.8) +
+  geom_vline(xintercept = as.numeric(trigger_date), colour = "grey40") +
+  geom_vline(xintercept = as.numeric(declaration_date), colour = "grey40") +
+  annotate("text", x = trigger_date, y = max(plot_df$infections_k) * 0.9, label = "AA trigger", angle = 90, vjust = -0.3, size = 3) +
+  annotate("text", x = declaration_date, y = max(plot_df$infections_k) * 0.9, label = "Outbreak declaration", angle = 90, vjust = -0.3, size = 3) +
+  scale_colour_manual(values = c(
+    "Scenario 1: baseline" = "#7f0000",
+    "Scenario 2: anticipatory action" = "#b04a2f",
+    "Scenario 3: anticipatory action plus one vaccine dose" = "#7d2d2d",
+    "Scenario 4: anticipatory action plus two vaccine doses" = "#c15a40"
+  )) +
+  scale_linetype_manual(values = c(
+    "Scenario 1: baseline" = "solid",
+    "Scenario 2: anticipatory action" = "11",
+    "Scenario 3: anticipatory action plus one vaccine dose" = "dotted",
+    "Scenario 4: anticipatory action plus two vaccine doses" = "longdash"
+  )) +
+  labs(
+    x = "Date",
+    y = "Infection rate (persons/day x 10^3)",
+    colour = "Intervention scenario",
+    linetype = "Intervention scenario",
+    title = "Scenario infection-rate trajectories"
+  ) +
+  theme_minimal()
 ```
+
+## 3) Plot Differences Versus Baseline
 
 ```{r}
 chlaa_plot_difference_vs_baseline(
   runs,
-  baseline = "baseline",
-  var = "inc_symptoms",
+  baseline = "scenario_1_baseline",
+  var = "inc_infections",
   cumulative = FALSE
 )
 ```
@@ -106,35 +114,32 @@ chlaa_plot_difference_vs_baseline(
 ```{r}
 chlaa_plot_difference_vs_baseline(
   runs,
-  baseline = "baseline",
-  var = "inc_symptoms",
+  baseline = "scenario_1_baseline",
+  var = "inc_infections",
   cumulative = TRUE
 )
 ```
 
-## 5) Summaries For Decision Support
+## 4) Decision-Facing Summary Tables
 
 ```{r}
-summary_tbl <- chlaa_scenario_summary(runs, baseline = "baseline")
+summary_tbl <- chlaa_scenario_summary(runs, baseline = "scenario_1_baseline", incidence_var = "inc_infections")
 summary_tbl
 ```
 
 ```{r}
 cmp <- chlaa_compare_scenarios(
   runs,
-  baseline = "baseline",
+  baseline = "scenario_1_baseline",
   include_econ = TRUE,
   wtp = 1500
 )
 cmp
 ```
 
-```{r}
-chlaa_plot_scenarios(cmp, metric = "deaths_averted")
-```
-
 ## Interpretation
 
-Use this pattern when you need transparent post-trigger comparisons. For full
-posterior scenario forecasting, use `chlaa_forecast_scenarios_from_fit()` and
-`chlaa_plot_scenario_forecasts()`.
+Using one shared case-study context across workflows makes differences easier to
+interpret: fitting explains parameter plausibility, scenario analysis explains
+epidemiological trade-offs, and economics (next vignette) explains resource
+trade-offs for the same intervention set.

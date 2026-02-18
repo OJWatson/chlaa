@@ -1,0 +1,40 @@
+---
+title: "Fitting Workflow (Full Local Run)"
+output: html_document
+---
+
+```{r}
+library(chlaa)
+library(ggplot2)
+
+case_study <- chlaa_case_study_setup(seed = 42, n_particles = 30)
+example_data <- case_study$data
+
+fit_data <- chlaa_prepare_data(
+  subset(example_data, date <= as.Date("2023-10-31")),
+  time_col = "time",
+  cases_col = "cases"
+)
+
+pars_start <- case_study$pars
+pars_start$contact_rate <- pars_start$contact_rate * 0.9
+pars_start$trans_prob <- pars_start$trans_prob * 1.1
+pars_start$reporting_rate <- pars_start$reporting_rate * 0.9
+
+fit <- chlaa_fit_pmcmc(
+  data = fit_data,
+  pars = pars_start,
+  n_particles = 120,
+  n_steps = 1200,
+  seed = 42,
+  proposal_var = 1e-5
+)
+
+chlaa_plot_parameter_pairs(
+  fit,
+  parameters = c("trans_prob", "contact_rate", "reporting_rate", "obs_size"),
+  burnin = 0.25,
+  thin = 4,
+  max_points = 5000
+)
+```

@@ -109,6 +109,20 @@ chlaa_plot_parameter_pairs <- function(fit,
     d <- d[sample.int(nrow(d), max_points), , drop = FALSE]
   }
 
+  if (requireNamespace("GGally", quietly = TRUE)) {
+    p <- GGally::ggpairs(
+      d,
+      lower = list(continuous = GGally::wrap("density", alpha = 0.9)),
+      diag = list(continuous = GGally::wrap("densityDiag", alpha = 0.6, fill = "#dbe9f6", colour = "#3a6ea5")),
+      upper = list(continuous = GGally::wrap("blankDiag"))
+    )
+    return(
+      p +
+        ggplot2::theme_minimal() +
+        ggplot2::labs(title = "Posterior parameter corner plot")
+    )
+  }
+
   pairs <- utils::combn(parameters, 2, simplify = FALSE)
   long <- do.call(rbind, lapply(pairs, function(pp) {
     data.frame(
@@ -121,13 +135,13 @@ chlaa_plot_parameter_pairs <- function(fit,
   }))
 
   ggplot2::ggplot(long, ggplot2::aes(x = .data$x, y = .data$y)) +
-    ggplot2::geom_point(alpha = 0.2, size = 0.5) +
-    ggplot2::geom_density_2d(alpha = 0.6) +
+    ggplot2::geom_bin2d(bins = 35) +
     ggplot2::facet_grid(.data$param_y ~ .data$param_x, scales = "free") +
+    ggplot2::scale_fill_viridis_c(option = "C", guide = "none") +
     ggplot2::labs(
       x = NULL,
       y = NULL,
-      title = "Pairwise posterior parameter densities"
+      title = "Pairwise posterior parameter densities (fallback)"
     ) +
     ggplot2::theme_minimal()
 }

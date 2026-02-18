@@ -13,83 +13,71 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 ## Why This Workflow?
 
-This vignette demonstrates a full fit-to-forecast cycle with:
+All package vignettes in this release use the same shared synthetic case study
+built by `chlaa_case_study_setup()`, so readers can compare fitting,
+intervention scenarios, and economics on a common outbreak context.
 
-1. A synthetic daily outbreak curve that resembles the qualitative pattern often seen in reported cholera surveillance (large first wave, suppression period, then rebound).
-2. A lightweight but fully runnable pMCMC fit.
-3. Diagnostics that show both parameter behaviour and likelihood behaviour.
-4. A forecast plot that overlays historical observations with model uncertainty bands.
-
-The goal is not to replicate any one outbreak exactly, but to show a transparent, reproducible workflow that users can adapt to real surveillance data.
+The setup is paper-aligned in broad terms (population scale, trigger/declaration
+cadence, and vaccine dose quantities) and designed to show a realistic
+multi-wave trajectory.
 
 ```{r}
 library(chlaa)
 library(ggplot2)
-set.seed(42)
+
+case_study <- chlaa_case_study_setup(seed = 42)
+example_data <- case_study$data
+
+head(example_data)
 ```
 
-## 1) Generate Example Outbreak Data
-
-We generate synthetic data with a strong first wave and a smaller later rebound. The defaults are tuned for an outbreak profile similar in shape to published response analyses.
+## 1) Visualise The Shared Outbreak Data
 
 ```{r}
-example_data <- chlaa_generate_example_outbreak_data(
-  time = 1:330,
-  start_date = as.Date("2021-08-01"),
-  seed = 42
-)
-
 ggplot(example_data, aes(x = date, y = cases)) +
   geom_line(linewidth = 0.5, colour = "black") +
   labs(
     x = "Date",
     y = "Reported cholera cases/day",
-    title = "Synthetic historical outbreak series"
+    title = "Shared synthetic outbreak data used across all vignettes"
   ) +
   theme_minimal()
 ```
 
 ## 2) Prepare Data And Starting Parameters
 
-We keep the input format strict (`time`, `cases`) and use a near-truth start for a stable, fast demo fit.
+To keep vignette runtime practical on CI, we fit an early-to-mid outbreak
+window and reserve later dynamics for scenario/economic workflows.
 
 ```{r}
-data_fit <- chlaa_prepare_data(example_data, time_col = "time", cases_col = "cases")
+fit_data_raw <- subset(example_data, date <= as.Date("2023-06-30"))
+fit_data <- chlaa_prepare_data(fit_data_raw, time_col = "time", cases_col = "cases")
 
-pars_start <- attr(example_data, "truth_parameters")
-pars_start$contact_rate <- pars_start$contact_rate * 0.9
-pars_start$trans_prob <- pars_start$trans_prob * 1.1
-pars_start$reporting_rate <- pars_start$reporting_rate * 0.9
+pars_start <- case_study$pars
+pars_start$contact_rate <- pars_start$contact_rate * 0.92
+pars_start$trans_prob <- pars_start$trans_prob * 1.08
+pars_start$reporting_rate <- pars_start$reporting_rate * 0.92
 ```
 
 ## 3) Fit With pMCMC
 
-For vignette runtime on CI we use a compact configuration. For real analyses, increase particles and chain length.
-
 ```{r}
 fit <- chlaa_fit_pmcmc(
-  data = data_fit,
+  data = fit_data,
   pars = pars_start,
   n_particles = 60,
-  n_steps = 220,
+  n_steps = 260,
   seed = 42,
   proposal_var = 1e-5
 )
 fit
 ```
 
-## 4) Summaries And Diagnostics
-
-We inspect acceptance, traces, pairwise posterior geometry, and likelihood trace.
+## 4) Diagnostics
 
 ```{r}
 fit_report <- chlaa_fit_report(fit, burnin = 0.25, thin = 2)
 fit_report$acceptance_rate
-```
-
-```{r}
-summary_tbl <- chlaa_posterior_summary(fit, burnin = 0.25, thin = 2)
-summary_tbl
 ```
 
 ```{r}
@@ -111,7 +99,7 @@ chlaa_plot_parameter_pairs(
   parameters = c("trans_prob", "contact_rate", "reporting_rate", "obs_size"),
   burnin = 0.25,
   thin = 2,
-  max_points = 1000
+  max_points = 1500
 )
 ```
 
@@ -121,16 +109,15 @@ chlaa_plot_parameter_vs_likelihood(
   parameters = c("trans_prob", "contact_rate", "reporting_rate"),
   burnin = 0.25,
   thin = 2,
-  max_points = 1000
+  max_points = 1500
 )
 ```
 
-## 5) Posterior Predictive Fit And Projection
-
-We forecast beyond the observed horizon and plot central tendency plus 50%, 75%, and 95% uncertainty intervals.
+## 5) Posterior Predictive Projection
 
 ```{r}
-forecast_time <- 1:400
+forecast_time <- case_study$time
+
 fc <- chlaa_forecast_from_fit(
   fit = fit,
   pars = pars_start,
@@ -147,10 +134,12 @@ fc <- chlaa_forecast_from_fit(
 )
 
 f_cases <- fc[fc$variable == "cases", ]
-f_cases$date <- as.Date("2021-08-01") + (f_cases$time - 1)
-obs <- example_data
-obs$date <- as.Date(obs$date)
+f_cases$date <- case_study$dates$start_date + f_cases$time
 
+obs <- example_data
+
+# Overlay style mirrors the narrative used in the paper figures:
+# historical line, mean projection, and nested uncertainty bands.
 ggplot() +
   geom_line(data = obs, aes(x = date, y = cases, colour = "Historical data"), linewidth = 0.5) +
   geom_line(data = f_cases, aes(x = date, y = mean, colour = "Mean projection"), linewidth = 0.7) +
@@ -169,7 +158,7 @@ ggplot() +
   )) +
   labs(
     x = "Date",
-    y = "No. of cholera cases/day",
+    y = "Reported cholera cases/day",
     colour = NULL,
     title = "Historical data and fitted model projection"
   ) +
@@ -178,9 +167,7 @@ ggplot() +
 
 ## Interpretation
 
-In this synthetic example, the model reproduces the broad outbreak dynamics and uncertainty envelope. On real data, you would next:
-
-1. Run longer chains and multiple seeds.
-2. Check convergence diagnostics more formally.
-3. Stress-test assumptions (reporting process, intervention windows, and priors).
-4. Carry posterior uncertainty through scenario and economic analyses.
+This fitting run is intentionally compact to stay CI-friendly while still
+showing the full workflow. For substantive analyses, increase chain length,
+particles, and number of seeds, and carry posterior uncertainty through
+counterfactual and economic decision analysis.

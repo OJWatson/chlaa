@@ -13,49 +13,66 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 ## Why This Workflow?
 
-This vignette demonstrates how epidemiological scenario output can be translated
-into decision-facing economic summaries:
+This vignette uses the same case-study data and scenario assumptions as the
+fitting and scenario vignettes, then extends to economic comparison and budget
+allocation.
 
-1. Explicit assumptions and their sources.
-2. Incremental costs and health outcomes versus baseline.
-3. CE plane and CEAC visualisations.
-4. Constrained budget allocation search.
+Compared with the earlier version, this workflow includes a richer scenario
+set, explicit source metadata, and multiple decision-support plots.
 
 ```{r}
 library(chlaa)
 library(ggplot2)
-set.seed(1)
+library(dplyr)
+
+case_study <- chlaa_case_study_setup(seed = 42)
+pars <- case_study$pars
+time <- case_study$time
+
+base_scenarios <- case_study$scenarios
 ```
 
-## 1) Build Scenario Runs
+## 1) Build An Expanded Scenario Set
+
+We add no-vaccine comparators to make the economic frontier more informative.
 
 ```{r}
-pars <- chlaa_parameters()
-time <- 0:60
+strip_vax <- function(mod) {
+  out <- mod
+  out$vax1_start <- 0
+  out$vax1_end <- 0
+  out$vax1_total_doses <- 0
+  out$vax1_doses_per_day <- 0
+  out$vax2_start <- 0
+  out$vax2_end <- 0
+  out$vax2_total_doses <- 0
+  out$vax2_doses_per_day <- 0
+  out
+}
 
-scenarios <- list(
-  chlaa_scenario("baseline", list()),
-  chlaa_scenario("wash_plus_cm", list(
-    chlor_start = 10, chlor_end = 60, chlor_effect = 0.2,
-    hyg_start = 10, hyg_end = 60, hyg_effect = 0.2,
-    orc_start = 10, orc_end = 60, orc_capacity = pars$orc_capacity,
-    ctc_start = 10, ctc_end = 60, ctc_capacity = pars$ctc_capacity
-  ))
+scenario_5 <- chlaa_scenario(
+  "scenario_5_baseline_response_no_vaccine",
+  strip_vax(base_scenarios[[1]]$modify)
 )
 
+scenario_6 <- chlaa_scenario(
+  "scenario_6_anticipatory_action_no_vaccine",
+  strip_vax(base_scenarios[[2]]$modify)
+)
+
+scenarios <- c(base_scenarios, list(scenario_5, scenario_6))
+
 runs <- chlaa_run_scenarios(
-  pars,
-  scenarios,
+  pars = pars,
+  scenarios = scenarios,
   time = time,
   n_particles = 40,
   dt = 1,
-  seed = 1
+  seed = 2
 )
 ```
 
-## 2) Economics Assumptions And Source Metadata
-
-Defaults are illustrative and should be replaced in real analyses.
+## 2) Economics Assumptions And Sources
 
 ```{r}
 econ <- chlaa_econ_defaults()
@@ -64,18 +81,16 @@ econ_sources <- chlaa_econ_sources()
 head(econ_sources)
 ```
 
-Published and assumption entries can be filtered separately:
-
 ```{r}
 subset(econ_sources, source_type == "published")
 ```
 
-## 3) Incremental Cost-Effectiveness Results
+## 3) Incremental Cost-Effectiveness Table
 
 ```{r}
 cmp <- chlaa_compare_scenarios(
   runs,
-  baseline = "baseline",
+  baseline = "scenario_1_baseline",
   include_econ = TRUE,
   econ = econ,
   wtp = 1500
@@ -83,16 +98,36 @@ cmp <- chlaa_compare_scenarios(
 cmp
 ```
 
+## 4) Visualise Incremental Outcomes
+
+```{r}
+plot_cmp <- cmp |>
+  mutate(
+    scenario = factor(scenario, levels = scenario),
+    deaths_averted_vs_baseline = deaths_averted
+  )
+
+ggplot(plot_cmp, aes(x = scenario, y = deaths_averted_vs_baseline, fill = scenario)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    x = NULL,
+    y = "Deaths averted vs scenario_1_baseline",
+    title = "Incremental health benefit across expanded scenario set"
+  ) +
+  theme_minimal()
+```
+
 ```{r}
 chlaa_plot_ce_plane(cmp)
 ```
 
-## 4) CEAC
+## 5) CEAC With Expanded Scenario Set
 
 ```{r}
 ceac_tbl <- chlaa_ceac(
   runs,
-  baseline = "baseline",
+  baseline = "scenario_1_baseline",
   wtp = seq(0, 3000, by = 250),
   econ = econ
 )
@@ -112,7 +147,7 @@ ggplot(ceac_tbl, aes(x = wtp, y = prob_best, colour = scenario)) +
   theme_minimal()
 ```
 
-## 5) Budget Allocation Optimisation
+## 6) Budget Allocation Optimisation
 
 ```{r}
 opt <- chlaa_optimise_budget(
@@ -121,7 +156,7 @@ opt <- chlaa_optimise_budget(
   time = time,
   n_particles = 20,
   dt = 1,
-  grid_size = 8,
+  grid_size = 10,
   min_fraction = list(vax = 0.1),
   max_fraction = list(wash = 0.6),
   max_vax_doses_per_day = 5000
@@ -135,8 +170,8 @@ ggplot(opt$evaluations, aes(x = budget_vax, y = budget_wash, colour = deaths)) +
   geom_point(size = 2, alpha = 0.8) +
   scale_colour_viridis_c() +
   labs(
-    x = "Budget to vaccination",
-    y = "Budget to WASH",
+    x = "Budget allocated to vaccination",
+    y = "Budget allocated to WASH",
     colour = "Expected deaths",
     title = "Budget allocation search surface"
   ) +
@@ -145,6 +180,6 @@ ggplot(opt$evaluations, aes(x = budget_vax, y = budget_wash, colour = deaths)) +
 
 ## Interpretation
 
-These outputs are useful for prioritisation and sensitivity exploration, not as
-final procurement estimates. For deployment, replace defaults with local unit
-costs, local age structure, and setting-specific YLL assumptions.
+The expanded scenario set gives a more useful economic frontier than a single
+intervention comparator. In operational use, replace defaults with local costs,
+coverage assumptions, and burden inputs before policy recommendation.
