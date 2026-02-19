@@ -33,11 +33,10 @@
 }
 
 # Internal: get a dust2 generator for either simulation or fitting
-chlaa_generator <- function(which = c("simulate", "fit")) {
-  which <- match.arg(which)
+chlaa_generator <- function() {
 
   # Keep these object names aligned with generated odin/dust symbols.
-  obj <- if (which == "fit") "cholera_model_fit" else "cholera_model"
+  obj <- "cholera_model"
   ns <- asNamespace("chlaa")
 
   # Packaged generator (present after odin2::odin_package())
@@ -82,8 +81,6 @@ chlaa_generator <- function(which = c("simulate", "fit")) {
 #' @param n_particles Number of particles.
 #' @param dt Discrete time step (days).
 #' @param seed RNG seed.
-#' @param which Which bundled generator to use: "simulate" (default) or "fit".
-#'   The fit generator includes the observation model needed for filtering/likelihood.
 #' @param n_threads Threads for dust2.
 #' @param deterministic Run in deterministic mode (replacing RNG draws with expectations) if supported.
 #'
@@ -94,14 +91,12 @@ chlaa_simulate <- function(pars,
                             n_particles = 1,
                             dt = 0.25,
                             seed = 1,
-                            which = c("simulate", "fit"),
                             n_threads = 1,
                             deterministic = FALSE) {
 
   .check_named_list(pars, "pars")
-  which <- match.arg(which)
 
-  gen <- chlaa_generator(which = which)
+  gen <- chlaa_generator()
   pars_use <- pars[names(pars) %in% attr(gen, "parameters")$name]
   sys <- dust2::dust_system_create(
     generator = gen,

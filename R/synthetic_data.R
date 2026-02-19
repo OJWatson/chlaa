@@ -9,9 +9,9 @@
   # https://pmc.ncbi.nlm.nih.gov/articles/PMC12477517/
   chlaa_parameters(
     N = 540000,
-    Sev0 = 0.2,
-    contact_rate = 2.8,
-    trans_prob = 0.005,
+    Sev0 = 2,
+    contact_rate = 10.1,
+    trans_prob = 0.055,
     reporting_rate = 0.12,
     obs_size = obs_size,
     chlor_start = 0, chlor_end = 0, chlor_effect = 0,
@@ -131,7 +131,7 @@
 #'   `data` includes columns `date`, `time`, `cases`, `mu_cases`,
 #'   `inc_symptoms_truth`, and `inc_infections_truth`.
 #' @export
-chlaa_case_study_setup <- function(time = 0:915,
+chlaa_case_study_setup <- function(time = 0:730,
                                    start_date = as.Date("2022-07-01"),
                                    trigger_date = as.Date("2022-10-25"),
                                    declaration_date = as.Date("2022-12-14"),
@@ -205,6 +205,7 @@ chlaa_case_study_setup <- function(time = 0:915,
 
   list(
     data = out,
+    truth = truth,
     pars = pars,
     scenarios = scenarios,
     dates = list(

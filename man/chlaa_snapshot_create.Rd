@@ -10,7 +10,6 @@ chlaa_snapshot_create(
   n_particles = 1,
   dt = 0.25,
   seed = 1,
-  which = c("simulate", "fit"),
   n_threads = 1,
   deterministic = FALSE
 )
@@ -25,8 +24,6 @@ chlaa_snapshot_create(
 \item{dt}{Model time step.}
 
 \item{seed}{RNG seed.}
-
-\item{which}{Generator choice: `"simulate"` or `"fit"`.}
 
 \item{n_threads}{Threads for dust2.}
 

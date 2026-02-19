@@ -5,7 +5,7 @@
 \title{Build A Shared Paper-Aligned Cholera Case Study Setup}
 \usage{
 chlaa_case_study_setup(
-  time = 0:915,
+  time = 0:730,
   start_date = as.Date("2022-07-01"),
   trigger_date = as.Date("2022-10-25"),
   declaration_date = as.Date("2022-12-14"),

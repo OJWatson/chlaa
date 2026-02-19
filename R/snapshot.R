@@ -32,7 +32,6 @@
 #' @param n_particles Number of particles.
 #' @param dt Model time step.
 #' @param seed RNG seed.
-#' @param which Generator choice: `"simulate"` or `"fit"`.
 #' @param n_threads Threads for dust2.
 #' @param deterministic Deterministic mode (if supported).
 #'
@@ -43,16 +42,14 @@ chlaa_snapshot_create <- function(pars,
                                   n_particles = 1,
                                   dt = 0.25,
                                   seed = 1,
-                                  which = c("simulate", "fit"),
                                   n_threads = 1,
                                   deterministic = FALSE) {
   .check_named_list(pars, "pars")
-  which <- match.arg(which)
   if (!is.numeric(snapshot_time) || length(snapshot_time) != 1) {
     stop("snapshot_time must be a single numeric value", call. = FALSE)
   }
 
-  gen <- chlaa_generator(which = which)
+  gen <- chlaa_generator()
   pars_use <- pars[names(pars) %in% attr(gen, "parameters")$name]
   sys <- dust2::dust_system_create(
     generator = gen,
@@ -76,7 +73,6 @@ chlaa_snapshot_create <- function(pars,
     time = dust2::dust_system_time(sys),
     n_particles = n_particles,
     dt = dt,
-    which = which,
     pars = pars
   )
   class(snap) <- c("chlaa_snapshot", class(snap))
@@ -110,7 +106,7 @@ chlaa_simulate_from_snapshot <- function(snapshot,
   if (is.null(pars)) pars <- snapshot$pars
   .check_named_list(pars, "pars")
 
-  gen <- chlaa_generator(which = snapshot$which)
+  gen <- chlaa_generator()
   pars_use <- pars[names(pars) %in% attr(gen, "parameters")$name]
   sys <- dust2::dust_system_create(
     generator = gen,

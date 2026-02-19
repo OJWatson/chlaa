@@ -14,8 +14,7 @@
 #' Parameter metadata table for the cholera model
 #'
 #' Returns metadata for all parameters required by the odin model and observation model.
-#' Defaults here are aligned to the defaults in `inst/odin/cholera_model.R` and
-#' `inst/odin/cholera_model_fit.R`.
+#' Defaults here are aligned to the defaults in `inst/odin/cholera_model.R`
 #'
 #' @return A data.frame with columns: name, default, units, description, source.
 #' @export
@@ -28,7 +27,7 @@ chlaa_parameter_info <- function() {
     .param("E0", 0L, "persons", "Initial exposed (latent).", src),
     .param("A0", 0L, "persons", "Initial asymptomatic infectious.", src),
     .param("M0", 0L, "persons", "Initial mild symptomatic (pre-triage stage).", src),
-    .param("Sev0", 2L, "persons", "Initial severe symptomatic (pre-triage stage).", src),
+    .param("Sev0", 1L, "persons", "Initial severe symptomatic (pre-triage stage).", src),
     .param("Mu0", 0L, "persons", "Initial mild untreated.", src),
     .param("Mt0", 0L, "persons", "Initial mild treated.", src),
     .param("Sevu0", 0L, "persons", "Initial severe untreated.", src),
@@ -48,12 +47,12 @@ chlaa_parameter_info <- function() {
     .param("duration_sym", 14.48, "days", "Duration of symptomatic infection.", src),
     .param("time_to_next_stage", 1.0, "days", "Time to next symptomatic stage (triage/progression).", src),
     .param("p_progress_severe", 0.30, "probability", "Probability mild progresses to severe.", src),
-    .param("immunity_asym", 180.0, "days", "Immunity duration after asymptomatic infection.", src),
+    .param("immunity_asym", 280, "days", "Immunity duration after asymptomatic infection.", src),
     .param("immunity_sym", 1095.0, "days", "Immunity duration after symptomatic infection.", src),
 
     # Transmission and environment
     .param("contact_rate", 10.01, "contacts/person/day", "Effective contact rate.", src),
-    .param("trans_prob", 0.055, "probability/contact", "Per-contact transmission probability.", src),
+    .param("trans_prob", 0.127, "probability/contact", "Per-contact transmission probability.", src),
     .param("time_to_contaminate", 19.075, "days", "Time-scale for contamination dynamics.", src),
     .param("water_clearance_time", 30.0, "days", "Environmental clearance time.", src),
     .param("contam_half_sat", 1.0, "index", "Half-saturation constant for contamination effect.", src),
@@ -63,8 +62,8 @@ chlaa_parameter_info <- function() {
     .param("contam_scale", 1.0e10, "CFU/index", "Scaling from CFU to contamination index.", src),
 
     # Care and case management
-    .param("seek_mild", 0.30, "probability", "Care seeking probability (mild).", src),
-    .param("seek_severe", 0.68, "probability", "Care seeking probability (severe).", src),
+    .param("seek_mild", 0.1, "probability", "Care seeking probability (mild).", src),
+    .param("seek_severe", 0.2, "probability", "Care seeking probability (severe).", src),
     .param("orc_capacity", 500.0, "persons/day", "ORC capacity while active.", src),
     .param("ctc_capacity", 100.0, "persons/day", "CTC capacity while active.", src),
     .param("treated_shed_mult_orc", 0.5, "multiplier", "Shedding multiplier in ORC.", src),

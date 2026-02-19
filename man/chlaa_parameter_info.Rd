@@ -11,6 +11,5 @@ A data.frame with columns: name, default, units, description, source.
 }
 \description{
 Returns metadata for all parameters required by the odin model and observation model.
-Defaults here are aligned to the defaults in `inst/odin/cholera_model.R` and
-`inst/odin/cholera_model_fit.R`.
+Defaults here are aligned to the defaults in `inst/odin/cholera_model.R`
 }

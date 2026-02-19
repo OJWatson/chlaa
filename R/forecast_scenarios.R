@@ -78,7 +78,6 @@
       n_particles = n_particles,
       dt = dt,
       seed = seed + i,
-      which = "simulate",
       n_threads = n_threads,
       deterministic = deterministic
     )

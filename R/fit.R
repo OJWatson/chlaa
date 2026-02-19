@@ -34,7 +34,7 @@ chlaa_fit_pmcmc <- function(data,
 
   data <- chlaa_prepare_data(data, time_col = "time", cases_col = "cases")
 
-  gen <- chlaa_generator(which = "fit")
+  gen <- chlaa_generator()
   # dust2 expects the filter start time to be strictly earlier than the first
   # observation time.
   time_start <- min(data$time) - 1

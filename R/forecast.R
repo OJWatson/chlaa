@@ -100,7 +100,6 @@ chlaa_forecast_from_fit <- function(fit,
       n_particles = n_particles,
       dt = dt,
       seed = seed + i,
-      which = "simulate",
       n_threads = n_threads,
       deterministic = deterministic
     )

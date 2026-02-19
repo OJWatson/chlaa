@@ -57,7 +57,6 @@ files <- c(
   file.path("R", "dust.R"),
   file.path("R", "cpp11.R"),
   file.path("src", "cholera_model.cpp"),
-  file.path("src", "cholera_model_fit.cpp"),
   file.path("src", "cpp11.cpp")
 )
 files <- unique(files[file.exists(files)])
@@ -89,7 +88,7 @@ if (isTRUE(run_smoke)) {
     sprintf(".libPaths(c(%s, .libPaths()))", dQuote(tmp_lib)),
     "library(chlaa)",
     "pars <- chlaa_parameters(validate = TRUE)",
-    "out <- chlaa_simulate(pars, time = 0:1, n_particles = 1, dt = 1, seed = 1, which = 'simulate')",
+    "out <- chlaa_simulate(pars, time = 0:1, n_particles = 1, dt = 1, seed = 1)",
     "stopifnot(is.data.frame(out), nrow(out) > 0)",
     sep = "; "
   )
