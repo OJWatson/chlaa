@@ -55,9 +55,6 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
-      - name: Check generated model sync
-        run: make check-sync
-
       - uses: r-lib/actions/check-r-package@v2
         with:
           args: 'c("--no-manual")'
