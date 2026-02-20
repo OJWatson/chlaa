@@ -82,12 +82,12 @@ to show a realistic multi-wave trajectory.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">example_data</span><span class="op">)</span></span>
 <span><span class="co">#&gt;         date time cases mu_cases inc_symptoms_truth inc_infections_truth</span></span>
-<span><span class="co">#&gt; 1 2022-07-01    0     0     0.01               0.00                 0.00</span></span>
-<span><span class="co">#&gt; 2 2022-07-02    1     0     0.01               0.00                 0.00</span></span>
-<span><span class="co">#&gt; 3 2022-07-03    2     0     0.01               0.00                 0.10</span></span>
-<span><span class="co">#&gt; 4 2022-07-04    3     0     0.01               0.00                 0.15</span></span>
-<span><span class="co">#&gt; 5 2022-07-05    4     0     0.01               0.00                 0.30</span></span>
-<span><span class="co">#&gt; 6 2022-07-06    5     0     0.01               0.05                 0.45</span></span></code></pre></div>
+<span><span class="co">#&gt; 1 2022-07-01    0     0    0.010               0.00                 0.00</span></span>
+<span><span class="co">#&gt; 2 2022-07-02    1     0    0.010               0.00                 1.20</span></span>
+<span><span class="co">#&gt; 3 2022-07-03    2     0    0.010               0.00                10.00</span></span>
+<span><span class="co">#&gt; 4 2022-07-04    3     0    0.042               0.35                21.65</span></span>
+<span><span class="co">#&gt; 5 2022-07-05    4     0    0.198               1.65                32.45</span></span>
+<span><span class="co">#&gt; 6 2022-07-06    5     0    0.396               3.30                45.90</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="visualise-the-shared-outbreak-data">1) Visualise The Shared Outbreak Data<a class="anchor" aria-label="anchor" href="#visualise-the-shared-outbreak-data"></a>
@@ -130,9 +130,9 @@ workflows.</p>
 <span>  seed <span class="op">=</span> <span class="fl">42</span>,</span>
 <span>  proposal_var <span class="op">=</span> <span class="fl">1e-5</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ⡀⠀ Sampling  <span style="color: #00BB00;">■                               </span> |   0% ETA: 16s</span></span>
-<span><span class="co">#&gt; ⠄⠀ Sampling  <span style="color: #00BB00;">■■■■■                           </span> |  14% ETA:  6s</span></span>
-<span><span class="co">#&gt; ⢂⠀ Sampling  <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■            </span> |  63% ETA:  2s</span></span>
+<span><span class="co">#&gt; ⡀⠀ Sampling  <span style="color: #00BB00;">■                               </span> |   0% ETA: 17s</span></span>
+<span><span class="co">#&gt; ⠄⠀ Sampling  <span style="color: #00BB00;">■■■■■■                          </span> |  17% ETA:  5s</span></span>
+<span><span class="co">#&gt; ⢂⠀ Sampling  <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■           </span> |  67% ETA:  2s</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Sampled 260 steps across 1 chain in 6.1s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">fit</span></span>
