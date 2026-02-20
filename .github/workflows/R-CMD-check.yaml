@@ -16,7 +16,17 @@ jobs:
           git config core.autocrlf false
           git reset --hard HEAD
       - name: Fail if compiled artefacts are tracked
-        run: bash tools/check_no_binaries.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          blocked_re='\.((o|so|dll|dylib|a|exe|obj|lib))$'
+          blocked_files="$(git ls-files | grep -E "$blocked_re" || true)"
+          if [ -n "$blocked_files" ]; then
+            echo "Tracked compiled artefacts found:"
+            echo "$blocked_files"
+            exit 1
+          fi
+          echo "No tracked compiled artefacts found."
 
   R-CMD-check:
     needs: no-binaries

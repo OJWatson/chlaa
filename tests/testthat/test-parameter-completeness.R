@@ -3,12 +3,8 @@ test_that("parameter metadata matches generator parameter sets", {
 
   info_names <- sort(unique(chlaa_parameter_info()$name))
 
-  sim_gen <- chlaa:::chlaa_generator("simulate")
-  fit_gen <- chlaa:::chlaa_generator("fit")
-  gen_names <- sort(unique(c(
-    attr(sim_gen, "parameters")$name,
-    attr(fit_gen, "parameters")$name
-  )))
+  gen <- chlaa:::chlaa_generator()
+  gen_names <- sort(unique(attr(gen, "parameters")$name))
 
   expect_setequal(info_names, gen_names)
 })

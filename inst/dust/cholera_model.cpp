@@ -386,19 +386,19 @@ public:
     state[27] = 0;
   }
   static void update(real_type time, real_type dt, const real_type* state, const shared_state& shared, internal_state& internal, rng_state_type& rng_state, real_type* state_next) {
-    const auto S = state[0];
-    const auto E = state[1];
-    const auto A = state[2];
-    const auto M = state[3];
-    const auto Sev = state[4];
-    const auto Mu = state[5];
-    const auto Mt = state[6];
-    const auto Sevu = state[7];
-    const auto Sevt = state[8];
-    const auto Ra = state[9];
-    const auto Rs = state[10];
-    const auto V1 = state[11];
-    const auto V2 = state[12];
+    const auto S = monty::math::max<real_type>(0, state[0]);
+    const auto E = monty::math::max<real_type>(0, state[1]);
+    const auto A = monty::math::max<real_type>(0, state[2]);
+    const auto M = monty::math::max<real_type>(0, state[3]);
+    const auto Sev = monty::math::max<real_type>(0, state[4]);
+    const auto Mu = monty::math::max<real_type>(0, state[5]);
+    const auto Mt = monty::math::max<real_type>(0, state[6]);
+    const auto Sevu = monty::math::max<real_type>(0, state[7]);
+    const auto Sevt = monty::math::max<real_type>(0, state[8]);
+    const auto Ra = monty::math::max<real_type>(0, state[9]);
+    const auto Rs = monty::math::max<real_type>(0, state[10]);
+    const auto V1 = monty::math::max<real_type>(0, state[11]);
+    const auto V2 = monty::math::max<real_type>(0, state[12]);
     const auto Du = state[13];
     const auto Dt = state[14];
     const auto C = state[15];
@@ -506,6 +506,9 @@ public:
     state_next[25] = cum_vax2 + vax2_admin;
     state_next[26] = cum_orc_treated + treat_orc;
     state_next[27] = cum_ctc_treated + treat_ctc;
+    for (size_t i = 0; i < 15; ++i) {
+      state_next[i] = monty::math::max<real_type>(0, state_next[i]);
+    }
   }
   static auto zero_every(const shared_state& shared) {
     return dust2::zero_every_type<real_type>{{1, {16}}, {1, {17}}, {1, {18}}, {1, {19}}, {1, {20}}};
