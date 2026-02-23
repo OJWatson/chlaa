@@ -13,20 +13,31 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 ## Why This Workflow?
 
-All package vignettes in this release use the same shared synthetic case study
-built by `chlaa_case_study_setup()`, so readers can compare fitting,
-intervention scenarios, and economics on a common outbreak context.
+This vignette fits the model to a cleaned historical outbreak time series
+digitized from Fig. 3 in:
 
-The setup is paper-aligned in broad terms (population scale, trigger/declaration
-cadence, and vaccine dose quantities) and designed to show a realistic
-multi-wave trajectory.
+Milano et al. (2025), modelling cholera response in the Democratic Republic
+of the Congo.
+
+The cleaned series is bundled in the package so the workflow is fully
+reproducible.
 
 ```{r}
 library(chlaa)
 library(ggplot2)
 
+data_path <- system.file(
+  "extdata", "outbreak", "nyiragongo_historical_cases_clean.csv",
+  package = "chlaa"
+)
+stopifnot(nzchar(data_path))
+
+example_data <- read.csv(data_path, stringsAsFactors = FALSE)
+example_data$date <- as.Date(example_data$date)
+example_data$time <- as.integer(example_data$date - min(example_data$date))
+
+# Keep shared baseline parameterization for a stable CI example fit.
 case_study <- chlaa_case_study_setup(seed = 42)
-example_data <- case_study$data
 
 head(example_data)
 ```
@@ -39,7 +50,7 @@ ggplot(example_data, aes(x = date, y = cases)) +
   labs(
     x = "Date",
     y = "Reported cholera cases/day",
-    title = "Shared synthetic outbreak data used across all vignettes"
+    title = "Cleaned historical outbreak data (Milano et al. Fig. 3)"
   ) +
   theme_minimal()
 ```
@@ -54,9 +65,13 @@ fit_data_raw <- subset(example_data, date <= as.Date("2023-06-30"))
 fit_data <- chlaa_prepare_data(fit_data_raw, time_col = "time", cases_col = "cases")
 
 pars_start <- case_study$pars
-pars_start$contact_rate <- pars_start$contact_rate * 0.92
-pars_start$trans_prob <- pars_start$trans_prob * 1.08
-pars_start$reporting_rate <- pars_start$reporting_rate * 0.92
+pars_start$Sev0 <- 20
+pars_start$E0 <- 20
+pars_start$M0 <- 10
+pars_start$contact_rate <- pars_start$contact_rate * 0.95
+pars_start$trans_prob <- pars_start$trans_prob * 1.05
+pars_start$reporting_rate <- 0.20
+pars_start$obs_size <- 30
 ```
 
 ## 3) Fit With pMCMC
@@ -116,7 +131,9 @@ chlaa_plot_parameter_vs_likelihood(
 ## 5) Posterior Predictive Projection
 
 ```{r}
-forecast_time <- case_study$time
+start_date <- min(example_data$date)
+forecast_end <- as.Date("2024-09-30")
+forecast_time <- 0:as.integer(forecast_end - start_date)
 
 fc <- chlaa_forecast_from_fit(
   fit = fit,
@@ -134,7 +151,7 @@ fc <- chlaa_forecast_from_fit(
 )
 
 f_cases <- fc[fc$variable == "cases", ]
-f_cases$date <- case_study$dates$start_date + f_cases$time
+f_cases$date <- start_date + f_cases$time
 
 obs <- example_data
 
@@ -170,4 +187,6 @@ ggplot() +
 This fitting run is intentionally compact to stay CI-friendly while still
 showing the full workflow. For substantive analyses, increase chain length,
 particles, and number of seeds, and carry posterior uncertainty through
-counterfactual and economic decision analysis.
+counterfactual and economic decision analysis. Because the observed data are
+now paper-derived, the fitted trajectory should resemble the historical
+outbreak shape shown in Milano et al. more closely than synthetic examples.
