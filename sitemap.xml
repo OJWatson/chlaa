@@ -1,15 +1,13 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://ojwatson.github.io/chlaa/404.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/LICENSE-text.html</loc></url>
-<url><loc>https://ojwatson.github.io/chlaa/SCHEMA.html</loc></url>
-<url><loc>https://ojwatson.github.io/chlaa/articles/fitting_workflow.html</loc></url>
+<url><loc>https://ojwatson.github.io/chlaa/articles/fitting.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/articles/health_econ_and_optimisation.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/articles/index.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/articles/scenario_workflow.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/authors.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/index.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_as_fit.html</loc></url>
-<url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_case_study_setup.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_ceac.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_compare_scenarios.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_counterfactual_grid.html</loc></url>
@@ -39,6 +37,7 @@
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_plot_incidence.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_plot_likelihood_density.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_plot_likelihood_trace.html</loc></url>
+<url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_plot_parameter_distributions.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_plot_parameter_pairs.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_plot_parameter_vs_likelihood.html</loc></url>
 <url><loc>https://ojwatson.github.io/chlaa/reference/chlaa_plot_ppc.html</loc></url>
