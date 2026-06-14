@@ -38,18 +38,20 @@
 
 .chlaa_simulate_posterior_matrix <- function(draws,
                                                idx,
+                                               fit,
                                                base_pars,
                                                modify = NULL,
                                                time,
                                                vars_use,
                                                include_cases,
                                                obs_model,
+                                               obs_interval,
                                                dt,
                                                seed,
                                                n_particles,
                                                n_threads,
                                                deterministic) {
-  if (!is.null(modify)) .check_named_list(modify, "modify")
+  if (!is.null(modify) && length(modify) > 0) .check_named_list(modify, "modify")
   .check_named_list(base_pars, "base_pars")
 
   T <- length(time)
@@ -62,12 +64,8 @@
   row0 <- 0L
   for (i in seq_len(n_draws)) {
     theta <- draws[idx[i], , drop = TRUE]
-    p <- base_pars
-    common <- intersect(names(theta), names(p))
-    if (length(common) > 0) {
-      p[common] <- as.list(as.numeric(theta[common]))
-    }
-    if (!is.null(modify)) {
+    p <- .chlaa_update_pars_from_theta(theta, base_pars, fit)
+    if (!is.null(modify) && length(modify) > 0) {
       p <- utils::modifyList(p, modify)
     }
     chlaa_parameters_validate(p)
@@ -89,12 +87,15 @@
     }
 
     if (isTRUE(include_cases)) {
-      if (!("inc_symptoms" %in% names(sim))) stop("inc_symptoms required to generate cases", call. = FALSE)
+      obs_incidence_var <- .chlaa_obs_incidence_var(obs_interval)
+      if (!(obs_incidence_var %in% names(sim))) {
+        stop(obs_incidence_var, " required to generate cases", call. = FALSE)
+      }
       if (!all(c("reporting_rate", "obs_size") %in% names(p))) {
         stop("reporting_rate and obs_size must be present in parameters", call. = FALSE)
       }
 
-      mu <- pmax(0, p$reporting_rate * sim$inc_symptoms)
+      mu <- pmax(0, p$reporting_rate * sim[[obs_incidence_var]])
       cases_vec <- if (obs_model == "mean") {
         mu
       } else {
@@ -153,6 +154,8 @@
 #' @param vars Model variables to summarise.
 #' @param include_cases Include predicted observed cases variable "cases".
 #' @param obs_model One of "nbinom" or "mean".
+#' @param obs_interval Observation interval in days for generated observed
+#'   cases. If NULL, uses `attr(fit, "obs_interval")`, falling back to 1.
 #' @param quantiles Quantiles to compute.
 #' @param n_draws Number of posterior draws to use.
 #' @param burnin Burn-in proportion or integer.
@@ -174,6 +177,7 @@ chlaa_forecast_scenarios_from_fit <- function(fit,
                                                 vars = c("inc_symptoms", "cum_symptoms", "cum_deaths"),
                                                 include_cases = TRUE,
                                                 obs_model = c("nbinom", "mean"),
+                                                obs_interval = NULL,
                                                 quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
                                                 n_draws = 100,
                                                 burnin = 0.5,
@@ -203,8 +207,9 @@ chlaa_forecast_scenarios_from_fit <- function(fit,
   }
   .check_named_list(pars, "pars")
   chlaa_parameters_validate(pars)
+  obs_interval <- .chlaa_forecast_obs_interval(obs_interval, fit)
 
-  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
+  draws <- .chlaa_fit_selected_draws_matrix(fit, burnin = burnin, thin = thin)
   if (nrow(draws) < 1) stop("No posterior iterations remain after burn-in/thinning", call. = FALSE)
 
   set.seed(seed)
@@ -232,12 +237,14 @@ chlaa_forecast_scenarios_from_fit <- function(fit,
   mats_base <- .chlaa_simulate_posterior_matrix(
     draws = draws,
     idx = idx,
+    fit = fit,
     base_pars = pars,
     modify = base_modify,
     time = time,
     vars_use = vars_use,
     include_cases = include_cases,
     obs_model = obs_model,
+    obs_interval = obs_interval,
     dt = dt,
     seed = seed,
     n_particles = n_particles,
@@ -262,12 +269,14 @@ chlaa_forecast_scenarios_from_fit <- function(fit,
     mats_s <- .chlaa_simulate_posterior_matrix(
       draws = draws,
       idx = idx,
+      fit = fit,
       base_pars = pars,
       modify = s$modify,
       time = time,
       vars_use = vars_use,
       include_cases = include_cases,
       obs_model = obs_model,
+      obs_interval = obs_interval,
       dt = dt,
       seed = seed,
       n_particles = n_particles,
@@ -296,5 +305,6 @@ chlaa_forecast_scenarios_from_fit <- function(fit,
   attr(res, "dt") <- dt
   attr(res, "draw_indices") <- idx
   attr(res, "quantiles") <- quantiles
+  attr(res, "obs_interval") <- obs_interval
   res
 }

@@ -77,19 +77,33 @@ chlaa_prepare_data <- function(data,
 #' @export
 chlaa_fit_report <- function(fit, burnin = 0.5, thin = 1, probs = c(0.025, 0.5, 0.975)) {
   fit <- chlaa_as_fit(fit)
-  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
-  if (nrow(draws) < 2) stop("Need at least 2 retained iterations for diagnostics", call. = FALSE)
+  chain_draws <- .chlaa_fit_chain_draws(fit, burnin = burnin, thin = thin, scale = "sampled")
+  param_cols <- setdiff(names(chain_draws), c("chain", "iteration"))
 
-  step_changed <- apply(abs(diff(draws)) > 0, 1, any)
-  acceptance_rate <- mean(step_changed)
+  acceptance_by_chain <- do.call(rbind, lapply(split(chain_draws, chain_draws$chain), function(d) {
+    if (nrow(d) < 2) stop("Need at least 2 retained iterations per chain for diagnostics", call. = FALSE)
+    step_changed <- apply(abs(diff(as.matrix(d[, param_cols, drop = FALSE]))) > 0, 1, any)
+    data.frame(
+      chain = d$chain[[1]],
+      acceptance_rate = mean(step_changed),
+      n_iterations = nrow(d),
+      stringsAsFactors = FALSE
+    )
+  }))
+  rownames(acceptance_by_chain) <- NULL
+  if (requireNamespace("tibble", quietly = TRUE)) acceptance_by_chain <- tibble::as_tibble(acceptance_by_chain)
+
+  acceptance_rate <- mean(acceptance_by_chain$acceptance_rate)
 
   trace <- chlaa_fit_trace(fit, burnin = burnin, thin = thin)
   summ <- chlaa_posterior_summary(fit, burnin = burnin, thin = thin, probs = probs)
 
   list(
     acceptance_rate = acceptance_rate,
-    n_iterations = nrow(draws),
-    n_parameters = ncol(draws),
+    acceptance_by_chain = acceptance_by_chain,
+    n_iterations = min(acceptance_by_chain$n_iterations),
+    n_draws = nrow(chain_draws),
+    n_parameters = length(param_cols),
     posterior_summary = summ,
     trace = trace
   )
@@ -101,25 +115,37 @@ chlaa_fit_report <- function(fit, burnin = 0.5, thin = 1, probs = c(0.025, 0.5, 
 #' @param burnin Burn-in proportion or count.
 #' @param thin Thinning interval.
 #' @param parameters Optional vector of parameter names to keep.
+#' @param scale Plot or return sampled MCMC coordinates (`"sampled"`) or
+#'   unpacked model parameters (`"natural"`).
 #'
-#' @return A long data.frame with columns `iteration`, `parameter`, `value`.
+#' @return A long data.frame with columns `chain`, `iteration`, `parameter`, `value`.
 #' @export
-chlaa_fit_trace <- function(fit, burnin = 0.0, thin = 1, parameters = NULL) {
+chlaa_fit_trace <- function(fit,
+                            burnin = 0.0,
+                            thin = 1,
+                            parameters = NULL,
+                            scale = c("sampled", "natural")) {
   fit <- chlaa_as_fit(fit)
-  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
+  scale <- match.arg(scale)
+  draws <- .chlaa_fit_chain_draws(fit, burnin = burnin, thin = thin, scale = scale)
+  param_cols <- setdiff(names(draws), c("chain", "iteration"))
 
   if (!is.null(parameters)) {
-    keep <- intersect(parameters, colnames(draws))
+    keep <- intersect(parameters, param_cols)
     if (length(keep) == 0) stop("No requested parameters found in draws", call. = FALSE)
-    draws <- draws[, keep, drop = FALSE]
+    param_cols <- keep
   }
 
-  out <- data.frame(
-    iteration = rep(seq_len(nrow(draws)), times = ncol(draws)),
-    parameter = rep(colnames(draws), each = nrow(draws)),
-    value = as.numeric(draws),
-    stringsAsFactors = FALSE
-  )
+  out <- do.call(rbind, lapply(param_cols, function(p) {
+    data.frame(
+      chain = draws$chain,
+      iteration = draws$iteration,
+      parameter = p,
+      value = draws[[p]],
+      stringsAsFactors = FALSE
+    )
+  }))
+  rownames(out) <- NULL
 
   if (requireNamespace("tibble", quietly = TRUE)) out <- tibble::as_tibble(out)
   out
@@ -131,16 +157,23 @@ chlaa_fit_trace <- function(fit, burnin = 0.0, thin = 1, parameters = NULL) {
 #' @param parameters Optional subset of parameter names.
 #' @param burnin Burn-in proportion or count.
 #' @param thin Thinning interval.
+#' @param scale Plot sampled MCMC coordinates (`"sampled"`) or unpacked model
+#'   parameters (`"natural"`).
 #'
 #' @return A ggplot object.
 #' @export
-chlaa_plot_trace <- function(fit, parameters = NULL, burnin = 0.0, thin = 1) {
+chlaa_plot_trace <- function(fit,
+                             parameters = NULL,
+                             burnin = 0.0,
+                             thin = 1,
+                             scale = c("sampled", "natural")) {
   .require_suggested("ggplot2")
-  tr <- chlaa_fit_trace(fit, burnin = burnin, thin = thin, parameters = parameters)
+  scale <- match.arg(scale)
+  tr <- chlaa_fit_trace(fit, burnin = burnin, thin = thin, parameters = parameters, scale = scale)
 
-  ggplot2::ggplot(tr, ggplot2::aes(x = .data$iteration, y = .data$value)) +
-    ggplot2::geom_line(alpha = 0.7) +
+  ggplot2::ggplot(tr, ggplot2::aes(x = .data$iteration, y = .data$value, colour = .data$chain)) +
+    ggplot2::geom_line(alpha = 0.7, linewidth = 0.3) +
     ggplot2::facet_wrap(~ .data$parameter, scales = "free_y") +
-    ggplot2::labs(x = "Iteration", y = "Value", title = "pMCMC traces") +
+    ggplot2::labs(x = "Iteration", y = "Value", colour = "Chain", title = "pMCMC traces") +
     ggplot2::theme_minimal()
 }

@@ -24,6 +24,7 @@ chlaa_fit_metadata <- function(fit) {
     packer = attr(fit, "packer", exact = TRUE),
     prior = attr(fit, "prior", exact = TRUE),
     start_pars = attr(fit, "start_pars", exact = TRUE),
+    chain_pars = attr(fit, "chain_pars", exact = TRUE),
     data = attr(fit, "data", exact = TRUE)
   )
 }
@@ -39,7 +40,7 @@ chlaa_fit_metadata <- function(fit) {
 #' @export
 chlaa_posterior_summary <- function(fit, burnin = 0.5, thin = 1, probs = c(0.025, 0.5, 0.975)) {
   fit <- chlaa_as_fit(fit)
-  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
+  draws <- .chlaa_fit_selected_draws_matrix(fit, burnin = burnin, thin = thin)
 
   q <- t(apply(draws, 2, stats::quantile, probs = probs, names = TRUE))
   mu <- colMeans(draws)
@@ -68,13 +69,15 @@ print.chlaa_fit <- function(x, ...) {
   md <- chlaa_fit_metadata(x)
 
   n_iter <- NA_integer_
+  n_chains <- NA_integer_
   n_par <- NA_integer_
-  dr <- try(chlaa_fit_draws(x), silent = TRUE)
+  dr <- try(.chlaa_fit_draws_array(x), silent = TRUE)
   if (!inherits(dr, "try-error")) {
-    n_iter <- nrow(dr)
-    n_par <- ncol(dr)
+    n_iter <- dim(dr)[2]
+    n_chains <- dim(dr)[3]
+    n_par <- dim(dr)[1]
   }
-  cat("Posterior draws: ", n_iter, " iterations; ", n_par, " parameters\n", sep = "")
+  cat("Posterior draws: ", n_iter, " iterations x ", n_chains, " chains; ", n_par, " parameters\n", sep = "")
 
   if (is.data.frame(md$data) && all(c("time", "cases") %in% names(md$data))) {
     cat("Data: ", nrow(md$data), " observations; time range [",

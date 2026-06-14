@@ -4,7 +4,13 @@
 \alias{chlaa_fit_trace}
 \title{Extract a long trace data frame from posterior draws}
 \usage{
-chlaa_fit_trace(fit, burnin = 0, thin = 1, parameters = NULL)
+chlaa_fit_trace(
+  fit,
+  burnin = 0,
+  thin = 1,
+  parameters = NULL,
+  scale = c("sampled", "natural")
+)
 }
 \arguments{
 \item{fit}{A `chlaa_fit` object.}
@@ -14,9 +20,12 @@ chlaa_fit_trace(fit, burnin = 0, thin = 1, parameters = NULL)
 \item{thin}{Thinning interval.}
 
 \item{parameters}{Optional vector of parameter names to keep.}
+
+\item{scale}{Plot or return sampled MCMC coordinates (`"sampled"`) or
+unpacked model parameters (`"natural"`).}
 }
 \value{
-A long data.frame with columns `iteration`, `parameter`, `value`.
+A long data.frame with columns `chain`, `iteration`, `parameter`, `value`.
 }
 \description{
 Extract a long trace data frame from posterior draws

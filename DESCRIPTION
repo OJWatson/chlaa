@@ -26,7 +26,11 @@ Suggests:
     knitr,
     rmarkdown,
     pkgdown,
-    GGally
+    GGally,
+    MASS,
+    coda,
+    purrr,
+    readr
 Imports:
     dust2,
     dplyr,

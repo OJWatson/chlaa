@@ -4,7 +4,13 @@
 \alias{chlaa_plot_trace}
 \title{Plot fit traces for selected parameters}
 \usage{
-chlaa_plot_trace(fit, parameters = NULL, burnin = 0, thin = 1)
+chlaa_plot_trace(
+  fit,
+  parameters = NULL,
+  burnin = 0,
+  thin = 1,
+  scale = c("sampled", "natural")
+)
 }
 \arguments{
 \item{fit}{A `chlaa_fit` object.}
@@ -14,6 +20,9 @@ chlaa_plot_trace(fit, parameters = NULL, burnin = 0, thin = 1)
 \item{burnin}{Burn-in proportion or count.}
 
 \item{thin}{Thinning interval.}
+
+\item{scale}{Plot sampled MCMC coordinates (`"sampled"`) or unpacked model
+parameters (`"natural"`).}
 }
 \value{
 A ggplot object.

@@ -20,6 +20,7 @@ chlaa_forecast_from_fit(
   n_particles = 1,
   n_threads = 1,
   deterministic = FALSE,
+  obs_interval = NULL,
   modify = NULL
 )
 }
@@ -54,6 +55,9 @@ chlaa_forecast_from_fit(
 
 \item{deterministic}{Run the process model deterministically (if supported).}
 
+\item{obs_interval}{Observation interval in days for generated observed
+cases. If NULL, uses `attr(fit, "obs_interval")`, falling back to 1.}
+
 \item{modify}{Optional named list of parameter modifications applied after each draw update.}
 }
 \value{
@@ -66,7 +70,9 @@ Runs the model for multiple posterior draws and returns time-by-time summaries
 \details{
 If `include_cases = TRUE`, this also generates a predictive distribution for observed
 cases using the observation model:
-  mu = reporting_rate * inc_symptoms
+  mu = reporting_rate * observed incidence
+where observed incidence is daily `inc_symptoms` for `obs_interval = 1`, or
+weekly `inc_symptoms_weekly` for `obs_interval = 7`.
 and either:
 - `obs_model = "nbinom"`: sample Negative Binomial noise
 - `obs_model = "mean"`: use mu directly

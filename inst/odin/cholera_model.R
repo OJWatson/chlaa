@@ -2,8 +2,7 @@
 ##
 ## Notes:
 ## - Designed for compilation with odin2 -> dust2 generator.
-## - Uses integer-valued compartment updates via binomial draws.
-## - Produces daily incidence variables via `zero_every = 1` accumulators.
+
 
 # Parameters
 
@@ -113,29 +112,37 @@ shed_mult <- max(0.0, 1.0 - (lat_active * lat_effect))
 
 # State variables (integer-valued compartments; C is continuous)
 initial(S) <- N - E0 - A0 - M0 - Sev0 - Mu0 - Mt0 - Sevu0 - Sevt0 - Ra0 - Rs0 - V10 - V20
-initial(E) <-    E0
-initial(A) <-    A0
-initial(M) <-    M0
-initial(Sev) <-  Sev0
-initial(Mu) <-   Mu0
-initial(Mt) <-   Mt0
+initial(E) <- E0
+initial(A) <- A0
+initial(M) <- M0
+initial(Sev) <- Sev0
+initial(Mu) <- Mu0
+initial(Mt) <- Mt0
 initial(Sevu) <- Sevu0
 initial(Sevt) <- Sevt0
-initial(Ra) <-   Ra0
-initial(Rs) <-   Rs0
-initial(V1) <-   V10
-initial(V2) <-   V20
+initial(Ra) <- Ra0
+initial(Rs) <- Rs0
+initial(V1) <- V10
+initial(V2) <- V20
 
 initial(Du) <- Du0
 initial(Dt) <- Dt0
 initial(C) <- C0
 
-# Daily incidence accumulators
+# Incidence accumulators. The daily names are used by the scenario and
+# historical daily-data workflows. Weekly names support IDSR fitting without
+# dividing weekly counts into pseudo-daily observations.
 initial(inc_infections, zero_every = 1) <- 0
 initial(inc_symptoms, zero_every = 1) <- 0
 initial(inc_deaths, zero_every = 1) <- 0
 initial(inc_vax1, zero_every = 1) <- 0
 initial(inc_vax2, zero_every = 1) <- 0
+
+initial(inc_infections_weekly, zero_every = 7) <- 0
+initial(inc_symptoms_weekly, zero_every = 7) <- 0
+initial(inc_deaths_weekly, zero_every = 7) <- 0
+initial(inc_vax1_weekly, zero_every = 7) <- 0
+initial(inc_vax2_weekly, zero_every = 7) <- 0
 
 # Cumulative outputs
 initial(cum_infections) <- 0
@@ -245,7 +252,10 @@ dC <- (shed_index / max(1e-9, time_to_contaminate)) - (C / max(1e-9, water_clear
 update(C) <- max(0.0, C + dt * dC)
 
 # Updates for compartments
-update(S) <- S - new_E_S - vax1_admin + wane_Ra + wane_Rs + wane_V1 + wane_V2
+# max(0, ...) guards on S and V1 prevent negative compartments when
+# independent binomial outflows (infection + vaccination + waning)
+# occasionally exceed the compartment size in the same sub-step.
+update(S) <- max(0, S - new_E_S - vax1_admin + wane_Ra + wane_Rs + wane_V1 + wane_V2)
 update(E) <- E + new_E - new_I
 update(A) <- A + new_A - rec_A
 
@@ -261,8 +271,8 @@ update(Sevt) <- Sevt + treat_ctc - leave_Sevt
 update(Ra) <- Ra + rec_A - wane_Ra
 update(Rs) <- Rs + leave_Mu + leave_Mt + rec_Sevu + rec_Sevt - wane_Rs
 
-update(V1) <- V1 + vax1_admin - vax2_admin - wane_V1 - new_E_V1
-update(V2) <- V2 + vax2_admin - wane_V2 - new_E_V2
+update(V1) <- max(0, V1 + vax1_admin - vax2_admin - wane_V1 - new_E_V1)
+update(V2) <- max(0, V2 + vax2_admin - wane_V2 - new_E_V2)
 
 update(Du) <- Du + death_Sevu
 update(Dt) <- Dt + death_Sevt
@@ -273,6 +283,12 @@ update(inc_symptoms) <- inc_symptoms + new_symp
 update(inc_deaths) <- inc_deaths + death_Sevu + death_Sevt
 update(inc_vax1) <- inc_vax1 + vax1_admin
 update(inc_vax2) <- inc_vax2 + vax2_admin
+
+update(inc_infections_weekly) <- inc_infections_weekly + new_E
+update(inc_symptoms_weekly) <- inc_symptoms_weekly + new_symp
+update(inc_deaths_weekly) <- inc_deaths_weekly + death_Sevu + death_Sevt
+update(inc_vax1_weekly) <- inc_vax1_weekly + vax1_admin
+update(inc_vax2_weekly) <- inc_vax2_weekly + vax2_admin
 
 update(cum_infections) <- cum_infections + new_E
 update(cum_symptoms) <- cum_symptoms + new_symp
@@ -290,4 +306,6 @@ reporting_rate <- parameter(0.2)
 obs_size <- parameter(25.0)
 #
 cases <- data()
-cases ~ NegativeBinomial(mu = reporting_rate * inc_symptoms, size = obs_size)
+obs_interval <- data()
+obs_inc_symptoms <- if (obs_interval <= 1.5) inc_symptoms else inc_symptoms_weekly
+cases ~ NegativeBinomial(mu = reporting_rate * obs_inc_symptoms, size = obs_size)

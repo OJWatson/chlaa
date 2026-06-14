@@ -27,7 +27,8 @@ chlaa_generate_example_outbreak_data(
 
 \item{declaration_date}{Outbreak declaration date.}
 
-\item{late_vax_start_date}{Planned campaign start date for scenarios 1 and 2.}
+\item{late_vax_start_date}{Planned campaign start date for the generated
+response scenario.}
 
 \item{seed}{Integer random seed.}
 
@@ -37,7 +38,8 @@ chlaa_generate_example_outbreak_data(
 
 \item{obs_size}{Observation over-dispersion (Negative Binomial size).}
 
-\item{vax_total_doses}{Total vaccine doses used in scenario definitions.}
+\item{vax_total_doses}{Total vaccine doses used in the generated response
+scenario.}
 
 \item{campaign_days}{Vaccination campaign duration (days).}
 }
@@ -47,6 +49,7 @@ A data.frame with columns `date`, `time`, `cases`, `mu_cases`,
   The generating parameter set is attached as `attr(x, "truth_parameters")`.
 }
 \description{
-Convenience wrapper around `chlaa_case_study_setup()` that returns only the
-synthetic observed case data frame.
+Generates a paper-aligned synthetic outbreak curve from the package model and
+returns the observed case data frame. This is intended as a small example data
+generator rather than a shared vignette setup object.
 }

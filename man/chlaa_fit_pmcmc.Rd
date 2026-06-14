@@ -9,10 +9,15 @@ chlaa_fit_pmcmc(
   pars,
   n_particles = 200,
   n_steps = 2000,
+  n_chains = 1,
+  chain_pars = NULL,
   seed = 1,
   prior = NULL,
   packer = NULL,
-  proposal_var = 0.02
+  proposal_var = 0.02,
+  obs_interval = NULL,
+  time_start = NULL,
+  deterministic = FALSE
 )
 }
 \arguments{
@@ -24,17 +29,40 @@ chlaa_fit_pmcmc(
 
 \item{n_steps}{Number of MCMC steps.}
 
+\item{n_chains}{Number of MCMC chains.}
+
+\item{chain_pars}{Optional list of per-chain starting parameter lists. If
+supplied, its length must equal `n_chains`; each element is packed with the
+same `packer` as `pars`.}
+
 \item{seed}{Random seed.}
 
 \item{prior}{Optional monty prior model. If NULL, uses `chlaa_default_prior()`.}
 
 \item{packer}{Optional monty packer. If NULL, uses `chlaa_default_packer()`.}
 
-\item{proposal_var}{Proposal variance (scalar) for diagonal random walk.}
+\item{proposal_var}{Proposal variance for the random walk sampler. Can be:
+- A scalar: used as the diagonal value for all parameters (default 0.02).
+- A numeric vector (length = number of fitted parameters): per-parameter
+  diagonal variances.
+- A square matrix: full variance-covariance proposal matrix.}
+
+\item{obs_interval}{Observation interval in days: 1 for daily cases or 7 for
+weekly cases. If NULL, inferred from the smallest spacing in `data$time`.}
+
+\item{time_start}{Optional filter start time. If NULL, inferred as the first
+observation time minus the smallest observed time step. For example,
+weekly data at `time = 7, 14, ...` starts from day 0, while daily data at
+`time = 0, 1, ...` starts from day -1 because dust requires the filter
+start to be strictly before the first observation.}
+
+\item{deterministic}{Logical; if TRUE, use dust2's deterministic unfilter
+likelihood instead of the particle filter.}
 }
 \value{
 A `chlaa_fit` object (also keeps monty class) with attributes:
-  packer, prior, start_pars, data.
+  packer, prior, start_pars, chain_pars, data, obs_interval, time_start,
+  deterministic.
 }
 \description{
 Expects a data.frame with columns:
@@ -42,6 +70,8 @@ Expects a data.frame with columns:
 - cases: integer case counts at those times
 }
 \details{
-Likelihood is defined inside `inst/odin/cholera_model_fit.R`:
-cases ~ NegativeBinomial(mu = reporting_rate * inc_symptoms, size = obs_size)
+The likelihood is defined inside `inst/odin/cholera_model.R`:
+cases ~ NegativeBinomial(mu = reporting_rate * observed incidence, size = obs_size)
+where observed incidence is daily `inc_symptoms` when `obs_interval = 1`,
+or weekly `inc_symptoms_weekly` when `obs_interval = 7`.
 }

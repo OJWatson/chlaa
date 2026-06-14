@@ -7,7 +7,9 @@
 #'
 #' If `include_cases = TRUE`, this also generates a predictive distribution for observed
 #' cases using the observation model:
-#'   mu = reporting_rate * inc_symptoms
+#'   mu = reporting_rate * observed incidence
+#' where observed incidence is daily `inc_symptoms` for `obs_interval = 1`, or
+#' weekly `inc_symptoms_weekly` for `obs_interval = 7`.
 #' and either:
 #' - `obs_model = "nbinom"`: sample Negative Binomial noise
 #' - `obs_model = "mean"`: use mu directly
@@ -27,6 +29,8 @@
 #' @param n_particles Particles per posterior draw.
 #' @param n_threads Threads for dust2.
 #' @param deterministic Run the process model deterministically (if supported).
+#' @param obs_interval Observation interval in days for generated observed
+#'   cases. If NULL, uses `attr(fit, "obs_interval")`, falling back to 1.
 #' @param modify Optional named list of parameter modifications applied after each draw update.
 #'
 #' @return A tidy data.frame with columns: time, variable, mean, quantiles, n_samples.
@@ -46,6 +50,7 @@ chlaa_forecast_from_fit <- function(fit,
                                       n_particles = 1,
                                       n_threads = 1,
                                       deterministic = FALSE,
+                                      obs_interval = NULL,
                                       modify = NULL) {
   obs_model <- match.arg(obs_model)
   fit <- chlaa_as_fit(fit)
@@ -68,8 +73,10 @@ chlaa_forecast_from_fit <- function(fit,
   chlaa_parameters_validate(pars)
 
   if (!is.null(modify)) .check_named_list(modify, "modify")
+  obs_interval <- .chlaa_forecast_obs_interval(obs_interval, fit)
+  obs_incidence_var <- .chlaa_obs_incidence_var(obs_interval)
 
-  draws <- chlaa_fit_select_iterations(chlaa_fit_draws(fit), burnin = burnin, thin = thin)
+  draws <- .chlaa_fit_selected_draws_matrix(fit, burnin = burnin, thin = thin)
   if (nrow(draws) < 1) stop("No posterior iterations remain after burn-in/thinning", call. = FALSE)
 
   set.seed(seed)
@@ -87,9 +94,7 @@ chlaa_forecast_from_fit <- function(fit,
   row0 <- 0L
   for (i in seq_len(n_draws)) {
     theta <- draws[idx[i], , drop = TRUE]
-    p <- pars
-    common <- intersect(names(theta), names(p))
-    if (length(common) > 0) p[common] <- as.list(as.numeric(theta[common]))
+    p <- .chlaa_update_pars_from_theta(theta, pars, fit)
 
     if (!is.null(modify)) p <- utils::modifyList(p, modify)
     chlaa_parameters_validate(p)
@@ -111,12 +116,14 @@ chlaa_forecast_from_fit <- function(fit,
     }
 
     if (isTRUE(include_cases)) {
-      if (!("inc_symptoms" %in% names(sim))) stop("inc_symptoms required to generate observed cases", call. = FALSE)
+      if (!(obs_incidence_var %in% names(sim))) {
+        stop(obs_incidence_var, " required to generate observed cases", call. = FALSE)
+      }
       if (!all(c("reporting_rate", "obs_size") %in% names(p))) {
         stop("reporting_rate and obs_size must be present in parameters", call. = FALSE)
       }
 
-      mu <- pmax(0, p$reporting_rate * sim$inc_symptoms)
+      mu <- pmax(0, p$reporting_rate * sim[[obs_incidence_var]])
 
       cases_vec <- if (obs_model == "mean") {
         mu
@@ -159,7 +166,24 @@ chlaa_forecast_from_fit <- function(fit,
   attr(out, "n_draws") <- n_draws
   attr(out, "n_particles") <- n_particles
   attr(out, "dt") <- dt
+  attr(out, "obs_interval") <- obs_interval
   out
+}
+
+.chlaa_forecast_obs_interval <- function(obs_interval, fit) {
+  if (is.null(obs_interval)) {
+    obs_interval <- attr(fit, "obs_interval", exact = TRUE)
+    if (is.null(obs_interval)) obs_interval <- 1
+  }
+  .chlaa_obs_interval(obs_interval, observed_step = obs_interval)
+}
+
+.chlaa_obs_incidence_var <- function(obs_interval) {
+  if (.chlaa_obs_interval(obs_interval, observed_step = obs_interval) == 7) {
+    "inc_symptoms_weekly"
+  } else {
+    "inc_symptoms"
+  }
 }
 
 #' Plot a forecast summary

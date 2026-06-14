@@ -13,6 +13,7 @@ chlaa_forecast_scenarios_from_fit(
   vars = c("inc_symptoms", "cum_symptoms", "cum_deaths"),
   include_cases = TRUE,
   obs_model = c("nbinom", "mean"),
+  obs_interval = NULL,
   quantiles = c(0.025, 0.25, 0.5, 0.75, 0.975),
   n_draws = 100,
   burnin = 0.5,
@@ -41,6 +42,9 @@ chlaa_forecast_scenarios_from_fit(
 \item{include_cases}{Include predicted observed cases variable "cases".}
 
 \item{obs_model}{One of "nbinom" or "mean".}
+
+\item{obs_interval}{Observation interval in days for generated observed
+cases. If NULL, uses `attr(fit, "obs_interval")`, falling back to 1.}
 
 \item{quantiles}{Quantiles to compute.}
 

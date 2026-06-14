@@ -1,13 +1,30 @@
-.PHONY: regen check-sync check-no-binaries render-vignettes-src
+.PHONY: document test check build render-vignettes clean-vignettes
 
-regen:
-	Rscript tools/regenerate_model.R
+R := Rscript --vanilla
 
-check-sync:
-	Rscript tools/check_model_sync.R
+document:
+	$(R) -e "devtools::document(roclets = c('rd', 'namespace'))"
 
-check-no-binaries:
-	bash tools/check_no_binaries.sh
+test:
+	$(R) -e "devtools::test()"
 
-render-vignettes-src:
-	Rscript tools/render_vignettes_src.R
+check:
+	$(R) -e "devtools::check(args = c('--no-manual'), error_on = 'warning')"
+
+build:
+	$(R) -e "devtools::build()"
+
+render-vignettes: vignettes/fitting.Rmd
+
+vignettes/fitting.Rmd: vignettes_src/fitting.Rmd
+	rm -f vignettes/fitting.md vignettes/fitting.Rmd
+	rm -rf vignettes/fitting vignettes_src/fitting
+	$(R) -e "if (requireNamespace('pkgload', quietly = TRUE)) pkgload::load_all('.', quiet = TRUE) else devtools::load_all('.', quiet = TRUE); rmarkdown::render('$<', output_format = rmarkdown::md_document(variant = 'markdown_github', preserve_yaml = TRUE), output_file = 'fitting.md', output_dir = 'vignettes', quiet = FALSE, envir = new.env(parent = globalenv()))"
+	mv vignettes/fitting.md vignettes/fitting.Rmd
+	mv vignettes_src/fitting vignettes/fitting
+
+clean-vignettes:
+	rm -f vignettes/fitting.md
+	rm -f vignettes/fitting.Rmd
+	rm -rf vignettes/fitting
+	rm -rf vignettes_src/fitting

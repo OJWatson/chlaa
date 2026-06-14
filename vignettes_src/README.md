@@ -1,17 +1,15 @@
-# Local Heavy Vignette Runs
+# Heavy Source Vignettes
 
-This folder is for heavyweight vignette runs that may be too slow for routine
-CI (`R CMD check`).
+This folder contains source documents for heavyweight vignettes that should not
+be rebuilt during routine `R CMD check`.
 
-Use:
+Render the precomputed Markdown artefacts with:
 
 ```bash
-Rscript tools/render_vignettes_src.R
+make render-vignettes
 ```
 
-The script renders `vignettes_src/*.Rmd` and copies resulting `*.html` outputs
-into `vignettes/` with matching filenames.
-
-Those rendered HTML files can then be included in pkgdown deployments as static
-analysis artefacts, while package vignettes in `vignettes/` remain fully
-runnable and CI-safe.
+The Makefile renders `vignettes_src/fitting.Rmd` to `vignettes/fitting.md`,
+then renames that rendered Markdown artefact to `vignettes/fitting.Rmd`.
+Figures are written next to the rendered output. The `vignettes_src/` directory
+itself is excluded from package builds via `.Rbuildignore`.

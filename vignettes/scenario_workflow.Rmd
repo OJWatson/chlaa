@@ -11,135 +11,193 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-## Why This Workflow?
+## Starting From The Kirotshe Fit
 
-This vignette uses the same shared case-study object as the fitting vignette,
-then compares four paper-style intervention scenarios in one coherent view:
-
-1. Baseline response.
-2. Anticipatory action.
-3. Anticipatory action plus one vaccine dose.
-4. Anticipatory action plus two vaccine doses.
+Scenario analysis should start from a model that can reproduce the outbreak we
+are using as the baseline. The fitting vignette saves the stochastic pMCMC fit
+for Kirotshe as package example data, so here we read that object rather than
+refitting the model.
 
 ```{r}
 library(chlaa)
 library(ggplot2)
 library(dplyr)
 
-case_study <- chlaa_case_study_setup(seed = 42)
-pars <- case_study$pars
-scenarios <- case_study$scenarios
-time <- case_study$time
+fit_obj <- readRDS(system.file(
+  "extdata", "kirotshe_particle_fit.rds",
+  package = "chlaa",
+  mustWork = TRUE
+))
+
+fit <- fit_obj$fit
+base_pars <- fit_obj$pars
+observed <- fit_obj$observed
+burnin <- fit_obj$burnin
+
+pars_fit <- chlaa_update_from_fit(
+  fit = fit,
+  pars = base_pars,
+  draw = "median",
+  burnin = burnin
+)
+```
+
+The posterior predictive check shows the fitted distribution for weekly
+reported cases. The points are the observed Kirotshe data; the ribbons and line
+come from posterior draws.
+
+```{r}
+fit_fc <- chlaa_forecast_from_fit(
+  fit = fit,
+  pars = base_pars,
+  time = observed$time,
+  vars = "inc_symptoms_weekly",
+  include_cases = TRUE,
+  obs_interval = 7,
+  obs_model = "nbinom",
+  n_draws = 80,
+  burnin = burnin,
+  seed = 11,
+  dt = 1
+)
+
+chlaa_plot_forecast(
+  fit_fc,
+  var = "cases",
+  data = observed,
+  data_y = "cases"
+)
+```
+
+## Counterfactual Scenarios
+
+The baseline scenario is the fitted outbreak with the recorded intervention
+timings. We compare it with one no-intervention counterfactual and two
+anticipatory-action examples. The AA examples move WASH and care earlier, and
+one adds a single-dose vaccination campaign.
+
+```{r}
+horizon <- max(observed$time) + 182
+scenario_time <- seq(7, horizon, by = 7)
+trigger_time <- min(observed$time[observed$cases >= 50])
+response_end <- horizon + 1
+campaign_days <- 28
+vaccine_doses <- floor(0.20 * pars_fit$N)
+
+no_intervention <- list(
+  chlor_start = 0, chlor_end = 0, chlor_effect = 0,
+  hyg_start = 0, hyg_end = 0, hyg_effect = 0,
+  lat_start = 0, lat_end = 0, lat_effect = 0,
+  cati_start = 0, cati_end = 0, cati_effect = 0,
+  orc_start = 0, orc_end = 0, orc_capacity = 0,
+  ctc_start = 0, ctc_end = 0, ctc_capacity = 0,
+  vax1_start = 0, vax1_end = 0, vax1_doses_per_day = 0, vax1_total_doses = 0,
+  vax2_start = 0, vax2_end = 0, vax2_doses_per_day = 0, vax2_total_doses = 0
+)
+
+aa_response <- list(
+  chlor_start = trigger_time, chlor_end = response_end, chlor_effect = pars_fit$chlor_effect,
+  hyg_start = trigger_time, hyg_end = response_end, hyg_effect = pars_fit$hyg_effect,
+  lat_start = trigger_time, lat_end = response_end, lat_effect = max(pars_fit$lat_effect, 0.10),
+  cati_start = trigger_time, cati_end = response_end, cati_effect = pars_fit$cati_effect,
+  orc_start = trigger_time, orc_end = response_end, orc_capacity = pars_fit$orc_capacity,
+  ctc_start = trigger_time, ctc_end = response_end, ctc_capacity = pars_fit$ctc_capacity,
+  vax1_start = 0, vax1_end = 0, vax1_doses_per_day = 0, vax1_total_doses = 0,
+  vax2_start = 0, vax2_end = 0, vax2_doses_per_day = 0, vax2_total_doses = 0
+)
+
+aa_vaccination <- modifyList(aa_response, list(
+  vax1_start = trigger_time + 14,
+  vax1_end = trigger_time + 14 + campaign_days,
+  vax1_total_doses = vaccine_doses,
+  vax1_doses_per_day = vaccine_doses / campaign_days
+))
+
+scenarios <- list(
+  chlaa_scenario("no_interventions", no_intervention),
+  chlaa_scenario("aa_response", aa_response),
+  chlaa_scenario("aa_response_plus_vaccine", aa_vaccination)
+)
 
 vapply(scenarios, `[[`, character(1), "name")
 ```
 
-## 1) Run The Scenario Set
+## Posterior Scenario Forecasts
+
+`chlaa_forecast_scenarios_from_fit()` uses the same posterior draws for each
+scenario, then reports absolute forecasts and paired differences against the
+baseline. That pairing matters because it removes some Monte Carlo noise from
+scenario differences.
 
 ```{r}
-runs <- chlaa_run_scenarios(
-  pars = pars,
+scenario_fc <- chlaa_forecast_scenarios_from_fit(
+  fit = fit,
+  pars = base_pars,
   scenarios = scenarios,
-  time = time,
-  n_particles = 40,
+  baseline_name = "fitted_response",
+  time = scenario_time,
+  vars = c("inc_symptoms_weekly", "cum_symptoms", "cum_deaths"),
+  include_cases = TRUE,
+  obs_interval = 7,
+  n_draws = 60,
+  burnin = burnin,
+  seed = 12,
+  dt = 1
+)
+```
+
+```{r}
+chlaa_plot_scenario_forecasts(
+  scenario_fc,
+  var = "cases",
+  type = "absolute",
+  data = observed,
+  data_y = "cases"
+)
+```
+
+```{r}
+chlaa_plot_scenario_forecasts(
+  scenario_fc,
+  var = "cum_deaths",
+  type = "difference",
+  include_baseline = FALSE
+)
+```
+
+## Decision Summary
+
+For compact decision tables we simulate the same scenarios using the posterior
+median parameter set. This is faster and easier to inspect, while the forecast
+plots above show posterior uncertainty.
+
+```{r}
+scenario_runs <- chlaa_run_scenarios(
+  pars = pars_fit,
+  scenarios = c(list(chlaa_scenario("fitted_response", list())), scenarios),
+  time = scenario_time,
+  n_particles = 50,
   dt = 1,
-  seed = 1
-)
-```
-
-## 2) Plot Infection-Rate Trajectories Together
-
-```{r}
-plot_df <- runs |>
-  group_by(scenario, time) |>
-  summarise(infections_per_day = mean(inc_infections), .groups = "drop") |>
-  mutate(
-    date = case_study$dates$start_date + time,
-    infections_k = infections_per_day / 1000
-  )
-
-label_map <- c(
-  scenario_1_baseline = "Scenario 1: baseline",
-  scenario_2_anticipatory_action = "Scenario 2: anticipatory action",
-  scenario_3_anticipatory_action_plus_one_vaccine_dose = "Scenario 3: anticipatory action plus one vaccine dose",
-  scenario_4_anticipatory_action_plus_two_vaccine_doses = "Scenario 4: anticipatory action plus two vaccine doses"
+  seed = 13
 )
 
-plot_df$scenario_label <- label_map[plot_df$scenario]
-
-trigger_date <- case_study$dates$trigger_date
-declaration_date <- case_study$dates$declaration_date
-
-# Style mirrors the paper-like comparison: all scenarios together,
-# intervention timing marked, and infection rates shown in thousands/day.
-ggplot(plot_df, aes(x = date, y = infections_k, colour = scenario_label, linetype = scenario_label)) +
-  geom_line(linewidth = 0.8) +
-  geom_vline(xintercept = as.numeric(trigger_date), colour = "grey40") +
-  geom_vline(xintercept = as.numeric(declaration_date), colour = "grey40") +
-  annotate("text", x = trigger_date, y = max(plot_df$infections_k) * 0.9, label = "AA trigger", angle = 90, vjust = -0.3, size = 3) +
-  annotate("text", x = declaration_date, y = max(plot_df$infections_k) * 0.9, label = "Outbreak declaration", angle = 90, vjust = -0.3, size = 3) +
-  scale_colour_manual(values = c(
-    "Scenario 1: baseline" = "#7f0000",
-    "Scenario 2: anticipatory action" = "#b04a2f",
-    "Scenario 3: anticipatory action plus one vaccine dose" = "#7d2d2d",
-    "Scenario 4: anticipatory action plus two vaccine doses" = "#c15a40"
-  )) +
-  scale_linetype_manual(values = c(
-    "Scenario 1: baseline" = "solid",
-    "Scenario 2: anticipatory action" = "11",
-    "Scenario 3: anticipatory action plus one vaccine dose" = "dotted",
-    "Scenario 4: anticipatory action plus two vaccine doses" = "longdash"
-  )) +
-  labs(
-    x = "Date",
-    y = "Infection rate (persons/day x 10^3)",
-    colour = "Intervention scenario",
-    linetype = "Intervention scenario",
-    title = "Scenario infection-rate trajectories"
-  ) +
-  theme_minimal()
-```
-
-## 3) Plot Differences Versus Baseline
-
-```{r}
-chlaa_plot_difference_vs_baseline(
-  runs,
-  baseline = "scenario_1_baseline",
-  var = "inc_infections",
-  cumulative = FALSE
+chlaa_scenario_summary(
+  scenario_runs,
+  baseline = "fitted_response",
+  incidence_var = "inc_symptoms_weekly"
 )
 ```
 
 ```{r}
-chlaa_plot_difference_vs_baseline(
-  runs,
-  baseline = "scenario_1_baseline",
-  var = "inc_infections",
-  cumulative = TRUE
-)
-```
-
-## 4) Decision-Facing Summary Tables
-
-```{r}
-summary_tbl <- chlaa_scenario_summary(runs, baseline = "scenario_1_baseline", incidence_var = "inc_infections")
-summary_tbl
-```
-
-```{r}
-cmp <- chlaa_compare_scenarios(
-  runs,
-  baseline = "scenario_1_baseline",
+chlaa_compare_scenarios(
+  scenario_runs,
+  baseline = "fitted_response",
   include_econ = TRUE,
   wtp = 1500
 )
-cmp
 ```
 
-## Interpretation
-
-Using one shared case-study context across workflows makes differences easier to
-interpret: fitting explains parameter plausibility, scenario analysis explains
-epidemiological trade-offs, and economics (next vignette) explains resource
-trade-offs for the same intervention set.
+The no-intervention scenario is useful for estimating how much the recorded
+response may have changed the outbreak. The AA scenarios ask a different
+question: what changes if similar response levers are triggered earlier, with
+or without vaccination.

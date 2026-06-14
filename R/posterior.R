@@ -12,6 +12,17 @@
 #' @return A numeric matrix with column names (iterations x parameters).
 #' @export
 chlaa_fit_draws <- function(fit) {
+  a <- .chlaa_fit_draws_array(fit)
+  pnames <- dimnames(a)[[1]]
+  mats <- lapply(seq_len(dim(a)[3]), function(k) {
+    t(a[, , k, drop = TRUE])
+  })
+  draws <- do.call(rbind, mats)
+  colnames(draws) <- pnames
+  draws
+}
+
+.chlaa_fit_draws_array <- function(fit) {
   draws <- NULL
 
   if (is.matrix(fit)) {
@@ -25,12 +36,11 @@ chlaa_fit_draws <- function(fit) {
 
       if (length(d) == 3) {
         pnames <- dimnames(a)[[1]]
-        mats <- lapply(seq_len(d[3]), function(k) {
-          m <- a[, , k, drop = TRUE]
-          t(m)
-        })
-        draws <- do.call(rbind, mats)
-        if (!is.null(pnames)) colnames(draws) <- pnames
+        draws <- a
+        if (!is.null(pnames)) dimnames(draws)[[1]] <- pnames
+        if (is.null(dimnames(draws)[[3]])) {
+          dimnames(draws)[[3]] <- .chlaa_fit_chain_names(d[3])
+        }
       } else if (length(d) == 2) {
         dn <- dimnames(a)
         rn <- dn[[1]]
@@ -69,8 +79,23 @@ chlaa_fit_draws <- function(fit) {
   }
 
   if (is.null(draws)) stop("Could not extract posterior draws from `fit`.", call. = FALSE)
-
   if (!is.numeric(draws)) storage.mode(draws) <- "double"
+
+  if (is.array(draws) && length(dim(draws)) == 3) {
+    if (is.null(dimnames(draws)[[1]]) || any(dimnames(draws)[[1]] == "")) {
+      packer <- attr(fit, "packer", exact = TRUE)
+      if (!is.null(packer) && !is.null(packer[["names"]])) {
+        pnames <- packer[["names"]]()
+        if (!is.null(pnames) && length(pnames) == dim(draws)[1]) {
+          dimnames(draws)[[1]] <- pnames
+        }
+      }
+    }
+    if (is.null(dimnames(draws)[[1]]) || any(dimnames(draws)[[1]] == "")) {
+      stop("Posterior draws are missing parameter names; cannot map draws to parameters.", call. = FALSE)
+    }
+    return(draws)
+  }
 
   if (is.null(colnames(draws)) || any(colnames(draws) == "")) {
     packer <- attr(fit, "packer", exact = TRUE)
@@ -85,22 +110,20 @@ chlaa_fit_draws <- function(fit) {
     stop("Posterior draws are missing column names; cannot map draws to parameters.", call. = FALSE)
   }
 
-  draws
+  a <- array(
+    t(draws),
+    dim = c(ncol(draws), nrow(draws), 1L),
+    dimnames = list(colnames(draws), NULL, "chain_1")
+  )
+  a
 }
 
-#' Select iterations from a posterior draws matrix
-#'
-#' @param draws Matrix of posterior draws (iterations x parameters).
-#' @param burnin Burn-in, either proportion in (0,1) or an integer count.
-#' @param thin Thinning interval (integer >= 1).
-#'
-#' @return A matrix subset of draws.
-#' @export
-chlaa_fit_select_iterations <- function(draws, burnin = 0.5, thin = 1) {
-  if (!is.matrix(draws)) stop("draws must be a matrix", call. = FALSE)
-  if (!is.numeric(thin) || length(thin) != 1 || thin < 1) stop("thin must be >= 1", call. = FALSE)
+.chlaa_fit_chain_names <- function(n_chains) {
+  paste0("chain_", seq_len(n_chains))
+}
 
-  n <- nrow(draws)
+.chlaa_iteration_index <- function(n, burnin = 0.5, thin = 1) {
+  if (!is.numeric(thin) || length(thin) != 1 || thin < 1) stop("thin must be >= 1", call. = FALSE)
   if (n < 1) stop("draws has no rows", call. = FALSE)
 
   b <- burnin
@@ -113,8 +136,115 @@ chlaa_fit_select_iterations <- function(draws, burnin = 0.5, thin = 1) {
   }
   start <- min(max(1, start), n)
 
-  idx <- seq(from = start, to = n, by = as.integer(thin))
+  seq(from = start, to = n, by = as.integer(thin))
+}
+
+#' Select iterations from a posterior draws matrix
+#'
+#' @param draws Matrix of posterior draws (iterations x parameters).
+#' @param burnin Burn-in, either proportion in (0,1) or an integer count.
+#' @param thin Thinning interval (integer >= 1).
+#'
+#' @return A matrix subset of draws.
+#' @export
+chlaa_fit_select_iterations <- function(draws, burnin = 0.5, thin = 1) {
+  if (!is.matrix(draws)) stop("draws must be a matrix", call. = FALSE)
+  idx <- .chlaa_iteration_index(nrow(draws), burnin = burnin, thin = thin)
   draws[idx, , drop = FALSE]
+}
+
+.chlaa_fit_chain_draws <- function(fit,
+                                   burnin = 0.5,
+                                   thin = 1,
+                                   scale = c("sampled", "natural")) {
+  scale <- match.arg(scale)
+  fit <- chlaa_as_fit(fit)
+  a <- .chlaa_fit_draws_array(fit)
+
+  idx <- .chlaa_iteration_index(dim(a)[2], burnin = burnin, thin = thin)
+  sampled_names <- dimnames(a)[[1]]
+  chain_names <- dimnames(a)[[3]]
+  if (is.null(chain_names) || any(chain_names == "")) {
+    chain_names <- .chlaa_fit_chain_names(dim(a)[3])
+  }
+
+  rows <- vector("list", length = dim(a)[3])
+  for (k in seq_len(dim(a)[3])) {
+    m <- t(a[, idx, k, drop = TRUE])
+    colnames(m) <- sampled_names
+    d <- as.data.frame(m, stringsAsFactors = FALSE)
+    if (scale == "natural") {
+      d <- .chlaa_natural_draws_from_sampled(d, fit)
+    }
+    d$chain <- chain_names[[k]]
+    d$iteration <- idx
+    rows[[k]] <- d[, c("chain", "iteration", setdiff(names(d), c("chain", "iteration"))), drop = FALSE]
+  }
+
+  out <- do.call(rbind, rows)
+  rownames(out) <- NULL
+  if (requireNamespace("tibble", quietly = TRUE)) out <- tibble::as_tibble(out)
+  out
+}
+
+.chlaa_natural_draws_from_sampled <- function(draws, fit) {
+  packer <- attr(fit, "packer", exact = TRUE)
+  if (is.null(packer) || is.null(packer[["unpack"]])) return(draws)
+
+  sampled_names <- colnames(draws)
+  first <- packer[["unpack"]](as.numeric(draws[1, sampled_names, drop = TRUE]))
+  fixed_names <- character()
+  if (!is.null(packer[["inputs"]])) {
+    inputs <- packer[["inputs"]]()
+    fixed_names <- names(inputs$fixed)
+  }
+  update_names <- setdiff(names(first), fixed_names)
+  process_names <- setdiff(update_names, sampled_names)
+  natural_names <- if (length(process_names) > 0) process_names else update_names
+
+  rows <- lapply(seq_len(nrow(draws)), function(i) {
+    theta <- as.numeric(draws[i, sampled_names, drop = TRUE])
+    names(theta) <- sampled_names
+    unpacked <- packer[["unpack"]](theta)
+    unlist(unpacked[natural_names], use.names = TRUE)
+  })
+
+  out <- as.data.frame(do.call(rbind, rows), stringsAsFactors = FALSE)
+  colnames(out) <- natural_names
+  out
+}
+
+.chlaa_fit_selected_draws_matrix <- function(fit,
+                                             burnin = 0.5,
+                                             thin = 1,
+                                             scale = c("sampled", "natural")) {
+  scale <- match.arg(scale)
+  draws <- .chlaa_fit_chain_draws(fit, burnin = burnin, thin = thin, scale = scale)
+  param_cols <- setdiff(names(draws), c("chain", "iteration"))
+  out <- as.matrix(draws[, param_cols, drop = FALSE])
+  colnames(out) <- param_cols
+  out
+}
+
+.chlaa_update_pars_from_theta <- function(theta, pars, fit = NULL) {
+  p <- pars
+  packer <- if (!is.null(fit)) attr(fit, "packer", exact = TRUE) else NULL
+
+  if (!is.null(packer) && !is.null(packer[["unpack"]])) {
+    unpacked <- packer[["unpack"]](theta)
+    inputs <- packer[["inputs"]]()
+    fixed_names <- names(inputs$fixed)
+    update_names <- setdiff(names(unpacked), fixed_names)
+
+    for (nm in intersect(update_names, names(p))) {
+      p[[nm]] <- unpacked[[nm]]
+    }
+  } else {
+    common <- intersect(names(theta), names(p))
+    if (length(common) > 0) p[common] <- as.list(as.numeric(theta[common]))
+  }
+
+  p
 }
 
 #' Update a parameter list using posterior information from a fit
@@ -141,8 +271,7 @@ chlaa_update_from_fit <- function(fit,
   draw <- match.arg(draw)
   .check_named_list(pars, "pars")
 
-  draws <- chlaa_fit_draws(fit)
-  draws2 <- chlaa_fit_select_iterations(draws, burnin = burnin, thin = thin)
+  draws2 <- .chlaa_fit_selected_draws_matrix(fit, burnin = burnin, thin = thin)
   if (nrow(draws2) < 1) stop("No posterior iterations remaining after burn-in/thinning.", call. = FALSE)
 
   theta <- switch(
@@ -166,12 +295,7 @@ chlaa_update_from_fit <- function(fit,
   theta <- as.numeric(theta)
   names(theta) <- colnames(draws2)
 
-  out <- pars
-  unknown <- setdiff(names(theta), names(out))
-  if (length(unknown) > 0) {
-    theta <- theta[setdiff(names(theta), unknown)]
-  }
-  out[names(theta)] <- as.list(theta)
+  out <- .chlaa_update_pars_from_theta(theta, pars, fit)
 
   if (isTRUE(validate)) chlaa_parameters_validate(out)
   out
@@ -267,8 +391,7 @@ chlaa_simulate_posterior <- function(fit,
                                       n_particles = 1) {
   if (!requireNamespace("dplyr", quietly = TRUE)) stop("dplyr is required", call. = FALSE)
 
-  draws <- chlaa_fit_draws(fit)
-  draws2 <- chlaa_fit_select_iterations(draws, burnin = burnin, thin = thin)
+  draws2 <- .chlaa_fit_selected_draws_matrix(fit, burnin = burnin, thin = thin)
   if (nrow(draws2) < 1) stop("No posterior iterations remaining after burn-in/thinning.", call. = FALSE)
 
   set.seed(seed)
@@ -277,9 +400,7 @@ chlaa_simulate_posterior <- function(fit,
   out <- vector("list", length(idx))
   for (i in seq_along(idx)) {
     theta <- draws2[idx[i], , drop = TRUE]
-    p <- pars
-    common <- intersect(names(theta), names(p))
-    p[common] <- as.list(as.numeric(theta[common]))
+    p <- .chlaa_update_pars_from_theta(theta, pars, fit)
     chlaa_parameters_validate(p)
 
     sim <- chlaa_simulate(p, time = time, n_particles = n_particles, dt = dt, seed = seed + i)

@@ -104,44 +104,41 @@
   )
 }
 
-#' Build A Shared Paper-Aligned Cholera Case Study Setup
+#' Generate A Synthetic Cholera Outbreak Time Series
 #'
-#' Constructs a reusable synthetic case study aligned to the outbreak response
-#' framing in:
-#' https://pmc.ncbi.nlm.nih.gov/articles/PMC12477517/
-#'
-#' The returned object includes:
-#' - one synthetic observed case time series (generated from scenario 1 baseline),
-#' - calibrated baseline parameters,
-#' - scenario definitions used throughout the vignettes.
+#' Generates a paper-aligned synthetic outbreak curve from the package model and
+#' returns the observed case data frame. This is intended as a small example data
+#' generator rather than a shared vignette setup object.
 #'
 #' @param time Numeric vector of simulation times (days).
 #' @param start_date Start date corresponding to `time = 0`.
 #' @param trigger_date Anticipatory action trigger date.
 #' @param declaration_date Outbreak declaration date.
-#' @param late_vax_start_date Planned campaign start date for scenarios 1 and 2.
+#' @param late_vax_start_date Planned campaign start date for the generated
+#'   response scenario.
 #' @param seed Integer random seed.
 #' @param n_particles Number of particles used to generate latent incidence.
 #' @param dt Model time step.
 #' @param obs_size Observation over-dispersion (Negative Binomial size).
-#' @param vax_total_doses Total vaccine doses used in scenario definitions.
+#' @param vax_total_doses Total vaccine doses used in the generated response
+#'   scenario.
 #' @param campaign_days Vaccination campaign duration (days).
 #'
-#' @return A named list with `data`, `pars`, `scenarios`, `dates`, and `time`.
-#'   `data` includes columns `date`, `time`, `cases`, `mu_cases`,
+#' @return A data.frame with columns `date`, `time`, `cases`, `mu_cases`,
 #'   `inc_symptoms_truth`, and `inc_infections_truth`.
+#'   The generating parameter set is attached as `attr(x, "truth_parameters")`.
 #' @export
-chlaa_case_study_setup <- function(time = 0:730,
-                                   start_date = as.Date("2022-07-01"),
-                                   trigger_date = as.Date("2022-10-25"),
-                                   declaration_date = as.Date("2022-12-14"),
-                                   late_vax_start_date = as.Date("2023-01-20"),
-                                   seed = 42,
-                                   n_particles = 20,
-                                   dt = 1,
-                                   obs_size = 18,
-                                   vax_total_doses = 280000,
-                                   campaign_days = 150) {
+chlaa_generate_example_outbreak_data <- function(time = 0:915,
+                                                 start_date = as.Date("2022-07-01"),
+                                                 trigger_date = as.Date("2022-10-25"),
+                                                 declaration_date = as.Date("2022-12-14"),
+                                                 late_vax_start_date = as.Date("2023-01-20"),
+                                                 seed = 42,
+                                                 n_particles = 20,
+                                                 dt = 1,
+                                                 obs_size = 18,
+                                                 vax_total_doses = 280000,
+                                                 campaign_days = 150) {
   if (!is.numeric(time) || length(time) < 2) {
     stop("time must be a numeric vector with length >= 2", call. = FALSE)
   }
@@ -202,55 +199,5 @@ chlaa_case_study_setup <- function(time = 0:730,
 
   attr(out, "truth_parameters") <- pars
   attr(out, "paper_reference") <- "https://pmc.ncbi.nlm.nih.gov/articles/PMC12477517/"
-
-  list(
-    data = out,
-    truth = truth,
-    pars = pars,
-    scenarios = scenarios,
-    dates = list(
-      start_date = start_date,
-      trigger_date = trigger_date,
-      declaration_date = declaration_date,
-      late_vax_start_date = late_vax_start_date
-    ),
-    time = time
-  )
-}
-
-#' Generate A Synthetic Cholera Outbreak Time Series
-#'
-#' Convenience wrapper around `chlaa_case_study_setup()` that returns only the
-#' synthetic observed case data frame.
-#'
-#' @inheritParams chlaa_case_study_setup
-#'
-#' @return A data.frame with columns `date`, `time`, `cases`, `mu_cases`,
-#'   `inc_symptoms_truth`, and `inc_infections_truth`.
-#'   The generating parameter set is attached as `attr(x, "truth_parameters")`.
-#' @export
-chlaa_generate_example_outbreak_data <- function(time = 0:915,
-                                                 start_date = as.Date("2022-07-01"),
-                                                 trigger_date = as.Date("2022-10-25"),
-                                                 declaration_date = as.Date("2022-12-14"),
-                                                 late_vax_start_date = as.Date("2023-01-20"),
-                                                 seed = 42,
-                                                 n_particles = 20,
-                                                 dt = 1,
-                                                 obs_size = 18,
-                                                 vax_total_doses = 280000,
-                                                 campaign_days = 150) {
-  chlaa_case_study_setup(
-    time = time,
-    start_date = start_date,
-    trigger_date = trigger_date,
-    declaration_date = declaration_date,
-    late_vax_start_date = late_vax_start_date,
-    seed = seed,
-    n_particles = n_particles,
-    dt = dt,
-    obs_size = obs_size,
-    vax_total_doses = vax_total_doses,
-    campaign_days = campaign_days
-  )$data
+  out
 }

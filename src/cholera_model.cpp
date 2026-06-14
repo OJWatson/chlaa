@@ -87,7 +87,7 @@ public:
         dust2::packing state;
       } packing;
       struct {
-        std::array<size_t, 28> state;
+        std::array<size_t, 33> state;
       } offset;
     } odin;
     real_type N;
@@ -165,6 +165,7 @@ public:
   struct internal_state {};
   struct data_type {
     real_type cases;
+    real_type obs_interval;
   };
   static dust2::packing packing_state(const shared_state& shared) {
     return shared.odin.packing.state;
@@ -264,6 +265,11 @@ public:
       {"inc_deaths", {}},
       {"inc_vax1", {}},
       {"inc_vax2", {}},
+      {"inc_infections_weekly", {}},
+      {"inc_symptoms_weekly", {}},
+      {"inc_deaths_weekly", {}},
+      {"inc_vax1_weekly", {}},
+      {"inc_vax2_weekly", {}},
       {"cum_infections", {}},
       {"cum_symptoms", {}},
       {"cum_deaths", {}},
@@ -280,7 +286,8 @@ public:
   }
   static data_type build_data(cpp11::list data, const shared_state& shared) {
     auto cases = dust2::r::read_real(data, "cases", NA_REAL);
-    return data_type{cases};
+    auto obs_interval = dust2::r::read_real(data, "obs_interval", NA_REAL);
+    return data_type{cases, obs_interval};
   }
   static void update_shared(cpp11::list parameters, shared_state& shared) {
     shared.N = dust2::r::read_real(parameters, "N", shared.N);
@@ -381,26 +388,31 @@ public:
     state[20] = 0;
     state[21] = 0;
     state[22] = 0;
-    state[23] = shared.Du0 + shared.Dt0;
+    state[23] = 0;
     state[24] = 0;
     state[25] = 0;
     state[26] = 0;
     state[27] = 0;
+    state[28] = shared.Du0 + shared.Dt0;
+    state[29] = 0;
+    state[30] = 0;
+    state[31] = 0;
+    state[32] = 0;
   }
   static void update(real_type time, real_type dt, const real_type* state, const shared_state& shared, internal_state& internal, rng_state_type& rng_state, real_type* state_next) {
-    const auto S = monty::math::max<real_type>(0, state[0]);
-    const auto E = monty::math::max<real_type>(0, state[1]);
-    const auto A = monty::math::max<real_type>(0, state[2]);
-    const auto M = monty::math::max<real_type>(0, state[3]);
-    const auto Sev = monty::math::max<real_type>(0, state[4]);
-    const auto Mu = monty::math::max<real_type>(0, state[5]);
-    const auto Mt = monty::math::max<real_type>(0, state[6]);
-    const auto Sevu = monty::math::max<real_type>(0, state[7]);
-    const auto Sevt = monty::math::max<real_type>(0, state[8]);
-    const auto Ra = monty::math::max<real_type>(0, state[9]);
-    const auto Rs = monty::math::max<real_type>(0, state[10]);
-    const auto V1 = monty::math::max<real_type>(0, state[11]);
-    const auto V2 = monty::math::max<real_type>(0, state[12]);
+    const auto S = state[0];
+    const auto E = state[1];
+    const auto A = state[2];
+    const auto M = state[3];
+    const auto Sev = state[4];
+    const auto Mu = state[5];
+    const auto Mt = state[6];
+    const auto Sevu = state[7];
+    const auto Sevt = state[8];
+    const auto Ra = state[9];
+    const auto Rs = state[10];
+    const auto V1 = state[11];
+    const auto V2 = state[12];
     const auto Du = state[13];
     const auto Dt = state[14];
     const auto C = state[15];
@@ -409,13 +421,18 @@ public:
     const auto inc_deaths = state[18];
     const auto inc_vax1 = state[19];
     const auto inc_vax2 = state[20];
-    const auto cum_infections = state[21];
-    const auto cum_symptoms = state[22];
-    const auto cum_deaths = state[23];
-    const auto cum_vax1 = state[24];
-    const auto cum_vax2 = state[25];
-    const auto cum_orc_treated = state[26];
-    const auto cum_ctc_treated = state[27];
+    const auto inc_infections_weekly = state[21];
+    const auto inc_symptoms_weekly = state[22];
+    const auto inc_deaths_weekly = state[23];
+    const auto inc_vax1_weekly = state[24];
+    const auto inc_vax2_weekly = state[25];
+    const auto cum_infections = state[26];
+    const auto cum_symptoms = state[27];
+    const auto cum_deaths = state[28];
+    const auto cum_vax1 = state[29];
+    const auto cum_vax2 = state[30];
+    const auto cum_orc_treated = state[31];
+    const auto cum_ctc_treated = state[32];
     const real_type I_eff = A + M + Sev + Mu + Mt + Sevu + Sevt;
     const real_type chlor_active = (time >= shared.chlor_start && time < shared.chlor_end ? 1 : 0);
     const real_type hyg_active = (time >= shared.hyg_start && time < shared.hyg_end ? 1 : 0);
@@ -481,7 +498,7 @@ public:
     const real_type new_E = new_E_S + new_E_V1 + new_E_V2;
     const real_type new_M = new_symp - new_Sev;
     state_next[15] = monty::math::max<real_type>(0, C + dt * dC);
-    state_next[0] = S - new_E_S - vax1_admin + wane_Ra + wane_Rs + wane_V1 + wane_V2;
+    state_next[0] = monty::math::max<real_type>(0, S - new_E_S - vax1_admin + wane_Ra + wane_Rs + wane_V1 + wane_V2);
     state_next[1] = E + new_E - new_I;
     state_next[2] = A + new_A - rec_A;
     state_next[3] = M + new_M - prog_M;
@@ -492,8 +509,8 @@ public:
     state_next[8] = Sevt + treat_ctc - leave_Sevt;
     state_next[9] = Ra + rec_A - wane_Ra;
     state_next[10] = Rs + leave_Mu + leave_Mt + rec_Sevu + rec_Sevt - wane_Rs;
-    state_next[11] = V1 + vax1_admin - vax2_admin - wane_V1 - new_E_V1;
-    state_next[12] = V2 + vax2_admin - wane_V2 - new_E_V2;
+    state_next[11] = monty::math::max<real_type>(0, V1 + vax1_admin - vax2_admin - wane_V1 - new_E_V1);
+    state_next[12] = monty::math::max<real_type>(0, V2 + vax2_admin - wane_V2 - new_E_V2);
     state_next[13] = Du + death_Sevu;
     state_next[14] = Dt + death_Sevt;
     state_next[16] = inc_infections + new_E;
@@ -501,25 +518,29 @@ public:
     state_next[18] = inc_deaths + death_Sevu + death_Sevt;
     state_next[19] = inc_vax1 + vax1_admin;
     state_next[20] = inc_vax2 + vax2_admin;
-    state_next[21] = cum_infections + new_E;
-    state_next[22] = cum_symptoms + new_symp;
-    state_next[23] = cum_deaths + death_Sevu + death_Sevt;
-    state_next[24] = cum_vax1 + vax1_admin;
-    state_next[25] = cum_vax2 + vax2_admin;
-    state_next[26] = cum_orc_treated + treat_orc;
-    state_next[27] = cum_ctc_treated + treat_ctc;
-    for (size_t i = 0; i < 15; ++i) {
-      state_next[i] = monty::math::max<real_type>(0, state_next[i]);
-    }
+    state_next[21] = inc_infections_weekly + new_E;
+    state_next[22] = inc_symptoms_weekly + new_symp;
+    state_next[23] = inc_deaths_weekly + death_Sevu + death_Sevt;
+    state_next[24] = inc_vax1_weekly + vax1_admin;
+    state_next[25] = inc_vax2_weekly + vax2_admin;
+    state_next[26] = cum_infections + new_E;
+    state_next[27] = cum_symptoms + new_symp;
+    state_next[28] = cum_deaths + death_Sevu + death_Sevt;
+    state_next[29] = cum_vax1 + vax1_admin;
+    state_next[30] = cum_vax2 + vax2_admin;
+    state_next[31] = cum_orc_treated + treat_orc;
+    state_next[32] = cum_ctc_treated + treat_ctc;
   }
   static auto zero_every(const shared_state& shared) {
-    return dust2::zero_every_type<real_type>{{1, {16}}, {1, {17}}, {1, {18}}, {1, {19}}, {1, {20}}};
+    return dust2::zero_every_type<real_type>{{1, {16}}, {1, {17}}, {1, {18}}, {1, {19}}, {1, {20}}, {7, {21}}, {7, {22}}, {7, {23}}, {7, {24}}, {7, {25}}};
   }
   static real_type compare_data(real_type time, const real_type* state, const data_type& data, const shared_state& shared, internal_state& internal, rng_state_type& rng_state) {
     auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };
     const auto inc_symptoms = state[17];
+    const auto inc_symptoms_weekly = state[22];
     real_type odin_ll = 0;
-    odin_ll += unless_nan(monty::density::negative_binomial_mu(data.cases, shared.obs_size, shared.reporting_rate * inc_symptoms, true));
+    const real_type obs_inc_symptoms = (data.obs_interval <= static_cast<real_type>(1.5) ? inc_symptoms : inc_symptoms_weekly);
+    odin_ll += unless_nan(monty::density::negative_binomial_mu(data.cases, shared.obs_size, shared.reporting_rate * obs_inc_symptoms, true));
     return odin_ll;
   }
 };

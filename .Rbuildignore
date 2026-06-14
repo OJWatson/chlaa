@@ -8,6 +8,9 @@
 ^\.Rproj\.user$
 ^.*\.Rproj$
 ^PROJECT_OVERVIEW\.md$
+^analysis$
+^Makefile$
+^SCHEMA\.md$
 ^inst/stan/vr_reporting_model\.rds$
 ^doc$
 ^Meta$

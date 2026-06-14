@@ -29,7 +29,10 @@
 *.hpp
 *.a
 
-# Vignettes / rendered outputs
+# Rendered HTML / PDF outputs
+*.html
+*.pdf
+/docs/
 /inst/doc/
 /vignettes/*.html
 /vignettes/*.pdf
