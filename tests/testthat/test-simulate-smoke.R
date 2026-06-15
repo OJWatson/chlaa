@@ -9,9 +9,14 @@ test_that("simulation runs with the bundled generator (fast smoke test)", {
 
   expect_true(is.data.frame(sim))
   expect_equal(nrow(sim), length(time) * n_particles)
-  expect_true(all(c("time", "particle", "inc_symptoms", "cum_deaths") %in% names(sim)))
+  expect_true(all(c(
+    "time", "particle", "inc_symptoms", "cum_deaths",
+    "expected_cases", "expected_cases_weekly", "cum_expected_cases"
+  ) %in% names(sim)))
 
   # Basic sanity: no missing values in core outputs
   expect_false(anyNA(sim$inc_symptoms))
   expect_false(anyNA(sim$cum_deaths))
+  expect_false(anyNA(sim$expected_cases))
+  expect_false(anyNA(sim$cum_expected_cases))
 })

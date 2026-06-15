@@ -26,7 +26,8 @@ test_that("daily incidence and cumulative counters are consistent", {
     inc_symptoms = "cum_symptoms",
     inc_deaths = "cum_deaths",
     inc_vax1 = "cum_vax1",
-    inc_vax2 = "cum_vax2"
+    inc_vax2 = "cum_vax2",
+    expected_cases = "cum_expected_cases"
   )
 
   by_particle <- split(sim, sim$particle)
@@ -38,5 +39,6 @@ test_that("daily incidence and cumulative counters are consistent", {
       expect_true(all(diff(df[[cum]]) >= 0), info = cum)
       expect_equal(diff(df[[cum]]), df[[inc]][-1], info = paste(inc, cum))
     }
+    expect_equal(df$expected_cases, pars$reporting_rate * df$inc_symptoms)
   }
 })

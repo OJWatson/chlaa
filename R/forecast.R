@@ -5,20 +5,17 @@
 #' Runs the model for multiple posterior draws and returns time-by-time summaries
 #' (mean and quantiles) for selected variables.
 #'
-#' If `include_cases = TRUE`, this also generates a predictive distribution for observed
-#' cases using the observation model:
-#'   mu = reporting_rate * observed incidence
-#' where observed incidence is daily `inc_symptoms` for `obs_interval = 1`, or
-#' weekly `inc_symptoms_weekly` for `obs_interval = 7`.
-#' and either:
+#' If `include_cases = TRUE`, this also uses the model's expected reported
+#' case output (`expected_cases` or `expected_cases_weekly`) and either:
 #' - `obs_model = "nbinom"`: sample Negative Binomial noise
-#' - `obs_model = "mean"`: use mu directly
+#' - `obs_model = "mean"`: use the model output directly
 #'
 #' @param fit A `chlaa_fit` object (or compatible).
 #' @param pars Baseline parameter list. If NULL, uses `attr(fit, "start_pars")`, otherwise `chlaa_parameters()`.
 #' @param time Vector of times to simulate.
 #' @param vars Character vector of model variables to summarise.
-#' @param include_cases Logical; include predicted observed cases as variable "cases".
+#' @param include_cases Logical; include predicted observed cases as variable
+#'   "cases", derived from the model's expected reported-case output.
 #' @param obs_model One of "nbinom" or "mean".
 #' @param quantiles Numeric vector of quantiles to return.
 #' @param n_draws Number of posterior draws to use.
@@ -74,7 +71,7 @@ chlaa_forecast_from_fit <- function(fit,
 
   if (!is.null(modify)) .check_named_list(modify, "modify")
   obs_interval <- .chlaa_forecast_obs_interval(obs_interval, fit)
-  obs_incidence_var <- .chlaa_obs_incidence_var(obs_interval)
+  obs_cases_var <- .chlaa_obs_cases_var(obs_interval)
 
   draws <- .chlaa_fit_selected_draws_matrix(fit, burnin = burnin, thin = thin)
   if (nrow(draws) < 1) stop("No posterior iterations remain after burn-in/thinning", call. = FALSE)
@@ -116,14 +113,14 @@ chlaa_forecast_from_fit <- function(fit,
     }
 
     if (isTRUE(include_cases)) {
-      if (!(obs_incidence_var %in% names(sim))) {
-        stop(obs_incidence_var, " required to generate observed cases", call. = FALSE)
+      if (!(obs_cases_var %in% names(sim))) {
+        stop(obs_cases_var, " required to generate observed cases", call. = FALSE)
       }
-      if (!all(c("reporting_rate", "obs_size") %in% names(p))) {
-        stop("reporting_rate and obs_size must be present in parameters", call. = FALSE)
+      if (!"obs_size" %in% names(p)) {
+        stop("obs_size must be present in parameters", call. = FALSE)
       }
 
-      mu <- pmax(0, p$reporting_rate * sim[[obs_incidence_var]])
+      mu <- pmax(0, sim[[obs_cases_var]])
 
       cases_vec <- if (obs_model == "mean") {
         mu
@@ -183,6 +180,14 @@ chlaa_forecast_from_fit <- function(fit,
     "inc_symptoms_weekly"
   } else {
     "inc_symptoms"
+  }
+}
+
+.chlaa_obs_cases_var <- function(obs_interval) {
+  if (.chlaa_obs_interval(obs_interval, observed_step = obs_interval) == 7) {
+    "expected_cases_weekly"
+  } else {
+    "expected_cases"
   }
 }
 

@@ -281,9 +281,11 @@ obs_interval_from_fit <- function(fit) {
   if (is.null(interval) || !is.finite(interval)) 1 else as.numeric(interval)
 }
 
-obs_case_var <- function(interval) {
-  if (identical(as.numeric(interval), 7)) "inc_symptoms_weekly" else "inc_symptoms"
+obs_expected_cases_var <- function(interval) {
+  if (identical(as.numeric(interval), 7)) "expected_cases_weekly" else "expected_cases"
 }
+
+scenario_cumulative_cases_var <- function() "cum_expected_cases"
 
 first_trigger_time <- function(observed, threshold = 50) {
   if (!is.data.frame(observed) || !all(c("time", "cases") %in% names(observed))) return(7)
@@ -342,11 +344,12 @@ scenario_modify_from_inputs <- function(input, pars) {
 scenario_metrics <- function(entries, selected) {
   entries <- entries[names(entries) %in% selected]
   if (length(entries) == 0) return(data.frame())
+  cumulative_var <- scenario_cumulative_cases_var()
 
   rows <- lapply(entries, function(entry) {
     fc <- entry$forecast
-    end_time <- max(fc$time[fc$type == "absolute" & fc$variable == "cum_symptoms"], na.rm = TRUE)
-    cum <- fc[fc$type == "absolute" & fc$variable == "cum_symptoms" & fc$time == end_time, , drop = FALSE]
+    end_time <- max(fc$time[fc$type == "absolute" & fc$variable == cumulative_var], na.rm = TRUE)
+    cum <- fc[fc$type == "absolute" & fc$variable == cumulative_var & fc$time == end_time, , drop = FALSE]
     no_int <- cum$mean[cum$scenario == "no_interventions"][1]
     sc <- cum[cum$scenario == entry$name, , drop = FALSE]
     if (nrow(sc) == 0) return(NULL)
@@ -368,8 +371,9 @@ scenario_metrics <- function(entries, selected) {
 
 combined_end_cumulative <- function(forecast) {
   if (is.null(forecast)) return(data.frame())
+  cumulative_var <- scenario_cumulative_cases_var()
   df <- forecast[
-    forecast$type == "absolute" & forecast$variable == "cum_symptoms",
+    forecast$type == "absolute" & forecast$variable == cumulative_var,
     ,
     drop = FALSE
   ]
@@ -398,7 +402,7 @@ plot_cumulative_cases <- function(forecast) {
     ggplot2::coord_flip() +
     ggplot2::labs(
       x = NULL,
-      y = "Cumulative symptomatic cases",
+      y = "Cumulative expected reported cases",
       title = "Cumulative cases"
     ) +
     ggplot2::theme_minimal() +
@@ -543,8 +547,8 @@ scenario_server <- function(id, fit_state) {
         fit = fs$fit,
         pars = fs$pars,
         time = observed$time,
-        vars = obs_case_var(interval),
-        include_cases = TRUE,
+        vars = obs_expected_cases_var(interval),
+        include_cases = FALSE,
         obs_interval = interval,
         obs_model = "mean",
         n_draws = 20,
@@ -590,8 +594,8 @@ scenario_server <- function(id, fit_state) {
           scenarios = scenarios,
           baseline_name = "fitted_response",
           time = scenario_time,
-          vars = c(obs_case_var(interval), "cum_symptoms", "cum_deaths"),
-          include_cases = TRUE,
+          vars = c(obs_expected_cases_var(interval), scenario_cumulative_cases_var(), "cum_deaths"),
+          include_cases = FALSE,
           obs_interval = interval,
           obs_model = "mean",
           n_draws = input$n_draws,
@@ -635,7 +639,7 @@ scenario_server <- function(id, fit_state) {
       if (!is.null(combined)) {
         chlaa::chlaa_plot_scenario_forecasts(
           combined,
-          var = "cases",
+          var = obs_expected_cases_var(obs_interval_from_fit(fs$fit)),
           type = "absolute",
           data = fs$observed,
           data_y = "cases"
@@ -645,7 +649,7 @@ scenario_server <- function(id, fit_state) {
         shiny::validate(shiny::need(!is.null(fc), "Preparing the default model-fit plot."))
         chlaa::chlaa_plot_forecast(
           fc,
-          var = "cases",
+          var = obs_expected_cases_var(obs_interval_from_fit(fs$fit)),
           data = fs$observed,
           data_y = "cases"
         )

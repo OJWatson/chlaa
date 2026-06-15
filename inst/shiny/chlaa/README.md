@@ -13,10 +13,11 @@ infection, environmental contamination, care seeking, treatment capacity,
 vaccination, and WASH-style transmission reductions.
 
 The fitted likelihood compares observed reported cases with model-generated
-incidence. For weekly data, the model uses `inc_symptoms_weekly`; for daily
-data it uses `inc_symptoms`. Reported cases are treated as a noisy observation
-of symptomatic incidence through a reporting fraction and a Negative Binomial
-dispersion parameter.
+expected reported cases. For weekly data, the model uses
+`expected_cases_weekly`; for daily data it uses `expected_cases`. These are
+odin/dust output variables derived from symptomatic incidence, the reporting
+fraction, and the observation interval; the Negative Binomial dispersion
+parameter controls observation noise.
 
 ## How fitting works
 
@@ -43,12 +44,12 @@ fc <- chlaa_forecast_from_fit(
   fit = fit,
   pars = attr(fit, "start_pars"),
   time = dat$time,
-  vars = "inc_symptoms_weekly",
-  include_cases = TRUE,
+  vars = "expected_cases_weekly",
+  include_cases = FALSE,
   obs_interval = 7
 )
 
-chlaa_plot_forecast(fc, var = "cases", data = dat, data_y = "cases")
+chlaa_plot_forecast(fc, var = "expected_cases_weekly", data = dat, data_y = "cases")
 ```
 
 If the ribbons cover the main timing and scale of the observed case counts, the
@@ -116,9 +117,9 @@ model. The observed points remain visible so that the baseline fit can be judged
 against the data. Saved scenarios can be shown or hidden without deleting their
 outputs.
 
-The cumulative-case metric reports the mean cumulative symptomatic cases at the
-end of the simulated horizon. The percentage reduction is computed against the
-no-intervention reference:
+The cumulative-case metric reports the model's mean `cum_expected_cases` output
+at the end of the simulated horizon. The percentage reduction is computed
+against the no-intervention reference:
 
 ```r
 100 * (cases_no_intervention - cases_scenario) / cases_no_intervention

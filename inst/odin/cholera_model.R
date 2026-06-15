@@ -143,6 +143,8 @@ initial(inc_symptoms_weekly, zero_every = 7) <- 0
 initial(inc_deaths_weekly, zero_every = 7) <- 0
 initial(inc_vax1_weekly, zero_every = 7) <- 0
 initial(inc_vax2_weekly, zero_every = 7) <- 0
+initial(expected_cases, zero_every = 1) <- 0
+initial(expected_cases_weekly, zero_every = 7) <- 0
 
 # Cumulative outputs
 initial(cum_infections) <- 0
@@ -152,6 +154,7 @@ initial(cum_vax1) <- 0
 initial(cum_vax2) <- 0
 initial(cum_orc_treated) <- 0
 initial(cum_ctc_treated) <- 0
+initial(cum_expected_cases) <- 0
 
 # Helper transition probabilities
 p_EI <- 1.0 - exp(-dt / incubation_time)
@@ -289,6 +292,8 @@ update(inc_symptoms_weekly) <- inc_symptoms_weekly + new_symp
 update(inc_deaths_weekly) <- inc_deaths_weekly + death_Sevu + death_Sevt
 update(inc_vax1_weekly) <- inc_vax1_weekly + vax1_admin
 update(inc_vax2_weekly) <- inc_vax2_weekly + vax2_admin
+update(expected_cases) <- expected_cases + reporting_rate * new_symp
+update(expected_cases_weekly) <- expected_cases_weekly + reporting_rate * new_symp
 
 update(cum_infections) <- cum_infections + new_E
 update(cum_symptoms) <- cum_symptoms + new_symp
@@ -297,6 +302,7 @@ update(cum_vax1) <- cum_vax1 + vax1_admin
 update(cum_vax2) <- cum_vax2 + vax2_admin
 update(cum_orc_treated) <- cum_orc_treated + treat_orc
 update(cum_ctc_treated) <- cum_ctc_treated + treat_ctc
+update(cum_expected_cases) <- cum_expected_cases + reporting_rate * new_symp
 
 
 # Data and observation model (for filtering / likelihood)
@@ -307,5 +313,5 @@ obs_size <- parameter(25.0)
 #
 cases <- data()
 obs_interval <- data()
-obs_inc_symptoms <- if (obs_interval <= 1.5) inc_symptoms else inc_symptoms_weekly
-cases ~ NegativeBinomial(mu = reporting_rate * obs_inc_symptoms, size = obs_size)
+obs_expected_cases <- if (obs_interval <= 1.5) expected_cases else expected_cases_weekly
+cases ~ NegativeBinomial(mu = obs_expected_cases, size = obs_size)

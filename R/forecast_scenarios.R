@@ -87,15 +87,15 @@
     }
 
     if (isTRUE(include_cases)) {
-      obs_incidence_var <- .chlaa_obs_incidence_var(obs_interval)
-      if (!(obs_incidence_var %in% names(sim))) {
-        stop(obs_incidence_var, " required to generate cases", call. = FALSE)
+      obs_cases_var <- .chlaa_obs_cases_var(obs_interval)
+      if (!(obs_cases_var %in% names(sim))) {
+        stop(obs_cases_var, " required to generate cases", call. = FALSE)
       }
-      if (!all(c("reporting_rate", "obs_size") %in% names(p))) {
-        stop("reporting_rate and obs_size must be present in parameters", call. = FALSE)
+      if (!"obs_size" %in% names(p)) {
+        stop("obs_size must be present in parameters", call. = FALSE)
       }
 
-      mu <- pmax(0, p$reporting_rate * sim[[obs_incidence_var]])
+      mu <- pmax(0, sim[[obs_cases_var]])
       cases_vec <- if (obs_model == "mean") {
         mu
       } else {
@@ -152,7 +152,8 @@
 #' @param baseline_name Baseline scenario name (modify list may be empty).
 #' @param time Simulation times. If NULL uses `fit` data times.
 #' @param vars Model variables to summarise.
-#' @param include_cases Include predicted observed cases variable "cases".
+#' @param include_cases Include predicted observed cases variable "cases",
+#'   derived from the model's expected reported-case output.
 #' @param obs_model One of "nbinom" or "mean".
 #' @param obs_interval Observation interval in days for generated observed
 #'   cases. If NULL, uses `attr(fit, "obs_interval")`, falling back to 1.
