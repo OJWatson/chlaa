@@ -16,3 +16,6 @@
 ^Meta$
 ^vignettes_src$
 ^vignettes/.*_full\.html$
+^.*\.Rcheck$
+^.*\.tar\.gz$
+^src/.*\.(o|so|rds)$
