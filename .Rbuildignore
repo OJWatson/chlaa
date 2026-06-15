@@ -4,6 +4,7 @@
 ^NEWS\.md$
 ^LICENSE\.md$
 ^\.github$
+^\.git$
 ^docs$
 ^\.Rproj\.user$
 ^.*\.Rproj$

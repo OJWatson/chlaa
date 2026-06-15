@@ -27,6 +27,7 @@ Suggests:
     rmarkdown,
     pkgdown,
     shiny,
+    pkgload,
     GGally,
     MASS,
     coda,
