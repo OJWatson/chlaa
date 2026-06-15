@@ -77,6 +77,197 @@ no_intervention_modify <- function() {
   )
 }
 
+custom_intervention_aliases <- function() {
+  c(
+    chlorination = "chlor", chlor = "chlor", chlorine = "chlor",
+    hygiene = "hyg", hyg = "hyg",
+    latrine = "lat", latrines = "lat", lat = "lat",
+    cati = "cati",
+    orc = "orc", oral_rehydration_point = "orc",
+    ctc = "ctc", cholera_treatment_centre = "ctc", cholera_treatment_center = "ctc",
+    vax1 = "vax1", vaccine1 = "vax1", vaccination1 = "vax1", dose1 = "vax1", dose_1 = "vax1",
+    vax2 = "vax2", vaccine2 = "vax2", vaccination2 = "vax2", dose2 = "vax2", dose_2 = "vax2"
+  )
+}
+
+normalise_intervention_name <- function(x) {
+  x <- tolower(trimws(as.character(x)))
+  x <- gsub("[^a-z0-9]+", "_", x)
+  gsub("^_+|_+$", "", x)
+}
+
+parse_intervention_numeric <- function(x, field, rows) {
+  x_chr <- trimws(as.character(x))
+  missing <- is.na(x) | !nzchar(x_chr) | tolower(x_chr) %in% c("na", "nan")
+  out <- rep(NA_real_, length(x_chr))
+  parsed <- suppressWarnings(as.numeric(x_chr[!missing]))
+  bad <- !missing
+  bad[!missing] <- is.na(parsed) | !is.finite(parsed)
+  if (any(bad)) {
+    bad_row <- rows[which(bad)[[1]]]
+    bad_value <- x_chr[which(bad)[[1]]]
+    stop(
+      sprintf(
+        "row %s column '%s' must be numeric or blank; found '%s'",
+        bad_row, field, bad_value
+      ),
+      call. = FALSE
+    )
+  }
+  out[!missing] <- parsed
+  out
+}
+
+require_intervention_value <- function(value, row, field, intervention) {
+  if (length(value) != 1 || is.na(value)) {
+    stop(
+      sprintf("row %s (%s) is missing required '%s'", row, intervention, field),
+      call. = FALSE
+    )
+  }
+  value
+}
+
+check_intervention_fraction <- function(value, row, field, intervention) {
+  if (value < 0 || value > 1) {
+    stop(
+      sprintf("row %s (%s) column '%s' must be between 0 and 1", row, intervention, field),
+      call. = FALSE
+    )
+  }
+  value
+}
+
+check_intervention_nonnegative <- function(value, row, field, intervention) {
+  if (!is.na(value) && value < 0) {
+    stop(
+      sprintf("row %s (%s) column '%s' must be non-negative", row, intervention, field),
+      call. = FALSE
+    )
+  }
+  value
+}
+
+custom_intervention_overrides <- function(dat) {
+  if (is.null(dat)) {
+    out <- list()
+    attr(out, "n_interventions") <- 0L
+    return(out)
+  }
+  if (!is.data.frame(dat) || nrow(dat) == 0) {
+    out <- list()
+    attr(out, "n_interventions") <- 0L
+    return(out)
+  }
+
+  names(dat) <- normalise_intervention_name(names(dat))
+  if (!"intervention" %in% names(dat)) {
+    stop(
+      "missing required 'intervention' column; expected columns are intervention,start,end,effect,capacity,total_doses,doses_per_day",
+      call. = FALSE
+    )
+  }
+
+  numeric_fields <- c("start", "end", "effect", "capacity", "total_doses", "doses_per_day")
+  row_ids <- seq_len(nrow(dat))
+  for (field in numeric_fields) {
+    if (!field %in% names(dat)) dat[[field]] <- NA_character_
+    dat[[field]] <- parse_intervention_numeric(dat[[field]], field, row_ids)
+  }
+
+  aliases <- custom_intervention_aliases()
+  raw_names <- trimws(as.character(dat$intervention))
+  empty_names <- !nzchar(raw_names) | is.na(raw_names)
+  if (any(empty_names)) {
+    stop(sprintf("row %s is missing required 'intervention'", which(empty_names)[[1]]), call. = FALSE)
+  }
+
+  lookup_names <- normalise_intervention_name(raw_names)
+  unknown <- setdiff(unique(lookup_names), names(aliases))
+  if (length(unknown) > 0) {
+    stop(
+      "unknown intervention name(s): ",
+      paste(unknown, collapse = ", "),
+      ". Supported names include chlorination, hygiene, latrine, CATI, ORC, CTC, vax1, and vax2.",
+      call. = FALSE
+    )
+  }
+
+  dat$intervention <- unname(aliases[lookup_names])
+  duplicates <- unique(dat$intervention[duplicated(dat$intervention)])
+  if (length(duplicates) > 0) {
+    stop(
+      "duplicate intervention row(s) are not supported for: ",
+      paste(duplicates, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  overrides <- list()
+  for (i in seq_len(nrow(dat))) {
+    row <- dat[i, , drop = FALSE]
+    intervention <- row$intervention[[1]]
+    start <- require_intervention_value(row$start[[1]], i, "start", intervention)
+    end <- require_intervention_value(row$end[[1]], i, "end", intervention)
+    if (end < start) {
+      stop(sprintf("row %s (%s) has end before start", i, intervention), call. = FALSE)
+    }
+
+    if (intervention %in% c("chlor", "hyg", "lat", "cati")) {
+      effect <- require_intervention_value(row$effect[[1]], i, "effect", intervention)
+      effect <- check_intervention_fraction(effect, i, "effect", intervention)
+      prefix <- c(chlor = "chlor", hyg = "hyg", lat = "lat", cati = "cati")[[intervention]]
+      overrides[[paste0(prefix, "_start")]] <- start
+      overrides[[paste0(prefix, "_end")]] <- end
+      overrides[[paste0(prefix, "_effect")]] <- effect
+    } else if (intervention %in% c("orc", "ctc")) {
+      capacity <- check_intervention_nonnegative(row$capacity[[1]], i, "capacity", intervention)
+      overrides[[paste0(intervention, "_start")]] <- start
+      overrides[[paste0(intervention, "_end")]] <- end
+      if (!is.na(capacity)) overrides[[paste0(intervention, "_capacity")]] <- capacity
+    } else if (intervention %in% c("vax1", "vax2")) {
+      total_doses <- check_intervention_nonnegative(row$total_doses[[1]], i, "total_doses", intervention)
+      doses_per_day <- check_intervention_nonnegative(row$doses_per_day[[1]], i, "doses_per_day", intervention)
+      campaign_days <- max(1, end - start)
+      if (is.na(total_doses) && is.na(doses_per_day)) {
+        stop(
+          sprintf("row %s (%s) must provide total_doses or doses_per_day", i, intervention),
+          call. = FALSE
+        )
+      }
+      if (is.na(doses_per_day)) doses_per_day <- total_doses / campaign_days
+      if (is.na(total_doses)) total_doses <- doses_per_day * campaign_days
+      overrides[[paste0(intervention, "_start")]] <- start
+      overrides[[paste0(intervention, "_end")]] <- end
+      overrides[[paste0(intervention, "_total_doses")]] <- total_doses
+      overrides[[paste0(intervention, "_doses_per_day")]] <- doses_per_day
+    }
+  }
+
+  attr(overrides, "n_interventions") <- nrow(dat)
+  overrides
+}
+
+intervention_schema_note <- function() {
+  shiny::tags$div(
+    class = "help-block",
+    shiny::tags$p("Optional long-form intervention CSV schema:"),
+    shiny::tags$pre(
+      paste(
+        "intervention,start,end,effect,capacity,total_doses,doses_per_day",
+        "chlorination,126,238,0.20,,,",
+        "ORC,77,231,,500,,",
+        "vax1,140,168,,,40000,1428.57",
+        sep = "\n"
+      )
+    ),
+    shiny::tags$p(
+      "Supported interventions: chlorination, hygiene, latrine, CATI, ORC, CTC, vax1, vax2. ",
+      "Leave unused numeric columns blank."
+    )
+  )
+}
+
 clean_scenario_name <- function(x) {
   x <- trimws(x)
   if (!nzchar(x)) x <- paste0("scenario_", format(Sys.time(), "%H%M%S"))
@@ -509,6 +700,8 @@ custom_data_ui <- function() {
         shiny::wellPanel(
           shiny::fileInput("custom_file", "CSV case data", accept = c(".csv", "text/csv")),
           shiny::uiOutput("custom_columns"),
+          shiny::fileInput("custom_interventions_file", "CSV interventions (optional)", accept = c(".csv", "text/csv")),
+          intervention_schema_note(),
           shiny::selectInput("custom_obs_interval", "Observation interval", choices = c("weekly" = 7, "daily" = 1), selected = 7),
           shiny::numericInput("custom_population", "Population size", value = 100000, min = 1, step = 1000),
           shiny::numericInput("custom_initial_exposed", "Initial exposed", value = 10, min = 0, step = 1),
@@ -561,6 +754,12 @@ server <- function(input, output, session) {
     utils::read.csv(req$datapath, stringsAsFactors = FALSE)
   })
 
+  custom_interventions_raw <- shiny::reactive({
+    req <- input$custom_interventions_file
+    if (is.null(req)) return(NULL)
+    utils::read.csv(req$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+  })
+
   output$custom_columns <- shiny::renderUI({
     dat <- custom_raw()
     if (is.null(dat)) return(shiny::tags$p("Upload a CSV with time and case-count columns."))
@@ -590,10 +789,33 @@ server <- function(input, output, session) {
     dat <- custom_raw()
     shiny::validate(shiny::need(!is.null(dat), "Upload a CSV before fitting."))
     prep <- chlaa::chlaa_prepare_data(dat, input$custom_time_col, input$custom_cases_col)
-    pars <- chlaa::chlaa_parameters(
-      N = input$custom_population,
-      E0 = input$custom_initial_exposed
+    intervention_overrides <- tryCatch(
+      custom_intervention_overrides(custom_interventions_raw()),
+      error = function(e) e
     )
+    if (inherits(intervention_overrides, "error")) {
+      custom_status(paste("Intervention CSV error:", conditionMessage(intervention_overrides)))
+      return()
+    }
+    n_interventions <- attr(intervention_overrides, "n_interventions", exact = TRUE) %||% 0L
+
+    pars <- tryCatch(
+      do.call(
+        chlaa::chlaa_parameters,
+        c(
+          list(
+            N = input$custom_population,
+            E0 = input$custom_initial_exposed
+          ),
+          intervention_overrides
+        )
+      ),
+      error = function(e) e
+    )
+    if (inherits(pars, "error")) {
+      custom_status(paste("Parameter error:", conditionMessage(pars)))
+      return()
+    }
     interval <- as.numeric(input$custom_obs_interval)
 
     custom_status("Fitting model...")
@@ -627,7 +849,10 @@ server <- function(input, output, session) {
       observed = prep,
       burnin = 0.25
     ))
-    custom_status(sprintf("Fit complete: %s observations, %s MCMC steps.", nrow(prep), input$custom_n_steps))
+    custom_status(sprintf(
+      "Fit complete: %s observations, %s MCMC steps, %s intervention row(s).",
+      nrow(prep), input$custom_n_steps, n_interventions
+    ))
   })
 
   output$custom_fit_status <- shiny::renderText(custom_status())

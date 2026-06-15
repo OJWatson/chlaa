@@ -162,6 +162,15 @@ Weekly data should usually have times `7, 14, 21, ...`; daily data can use
 `1, 2, 3, ...` or another regular daily index. After fitting, the same scenario
 controls become available.
 
+The tab also accepts an optional long-form intervention CSV with columns
+`intervention,start,end,effect,capacity,total_doses,doses_per_day`. Supported
+intervention names are `chlorination`, `hygiene`, `latrine`, `CATI`, `ORC`,
+`CTC`, `vax1`, and `vax2`; unused numeric columns can be blank. Effect rows use
+`effect`, care-capacity rows use `capacity`, and vaccination rows use
+`total_doses` and/or `doses_per_day`. Example upload files are in
+`inst/shiny/chlaa/examples/oj_cases.csv` and
+`inst/shiny/chlaa/examples/oj_interventions.csv`.
+
 For quick app use, start with a small number of MCMC steps and particles. For
 publication or operational decisions, run the package fitting workflow outside
 the app with longer chains, multiple starting points, trace diagnostics, and

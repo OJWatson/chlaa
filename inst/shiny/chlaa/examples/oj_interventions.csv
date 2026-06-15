@@ -1,0 +1,8 @@
+intervention,start,end,effect,capacity,total_doses,doses_per_day
+chlorination,28,84,0.20,,,
+hygiene,28,84,0.15,,,
+latrine,35,84,0.10,,,
+CATI,35,70,0.12,,,
+ORC,42,84,,80,,
+CTC,49,84,,25,,
+vax1,49,77,,,12000,428.571
